@@ -1,0 +1,23 @@
+{
+  "skill_name": "wiki-reconcile",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "We just finished Phase 12 yesterday and the sub-agent confirmed everything passed. The wiki hasn't been touched since Phase 9. Can you reconcile the wiki?",
+      "expected_output": "Agent reads log.md, reads TASKS.md, identifies phases 10-12 as complete, updates overview.md with those phases, supersedes any open defects that were resolved in the log, and appends a reconcile log entry.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "We patched the Telegram webhook secret token bug last week. I'm worried the wiki still describes it as a missing feature.",
+      "expected_output": "Agent checks log.md for the Telegram secret token fix, finds the wiki page that describes it as a gap/vulnerability, supersedes it with the resolution, and logs the reconcile pass.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "reconcile the wiki — we've applied about 4 new migrations since the last update and I think Database.md is totally out of date",
+      "expected_output": "Agent reads Database.md, reads all migration files in backend/migrations/, identifies tables/columns added or dropped since the last wiki update, updates Database.md with new tables and supersedes dropped columns, and logs the result.",
+      "files": []
+    }
+  ]
+}
