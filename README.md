@@ -17,6 +17,7 @@ A complete, copy-paste AI agent workflow system for software projects. Drop this
 | **Wiki Workflows** | `/wiki-audit`, `/wiki-review` — keep the knowledge base accurate and current |
 | **Coding Conventions** | Strict, language-agnostic rules enforced on every code generation |
 | **Ponytail** | Anti-bloat discipline — forces the laziest solution that actually works |
+| **Playwright CLI Bridge** | Browser automation through a persistent CLI bridge — attaches to a live browser via CDP |
 
 ---
 
@@ -240,6 +241,9 @@ your-project/
 │   ├── subagent-dispatch/
 │   ├── ponytail/
 │   ├── graphify/
+│   ├── playwright-cli/                # Full Playwright CLI command reference
+│   │   └── references/               # Advanced patterns (tests, mocking, video, etc.)
+│   ├── playwright-cli-bridge/         # Thin bridge layer for attaching to live browsers
 │   └── project-planner/
 │       └── references/
 └── global_workflows/
