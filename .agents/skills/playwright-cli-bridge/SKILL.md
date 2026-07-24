@@ -7,7 +7,9 @@ description: Guide for browser automation through the pw-bridge.bat persistent C
 
 The bridge (`pw-bridge.bat`) connects `playwright-cli` to an **already-running browser** via Chrome DevTools Protocol (CDP). It proxies all `playwright-cli` commands through a persistent bridge server, so the AI can automate a browser the user already has open.
 
-**For the full command reference and all capabilities, read the `playwright-cli` skill at `D:\AI\.agents\skills\playwright-cli\SKILL.md`.** That skill is the authoritative guide — this document only covers how to set up and route commands through the bridge.
+> ⚙️ **Setup required:** Set up the `bridge/` directory (containing `pw-bridge.bat`, `pw-bridge.ps1`, `pw_bridge_server.py`, `launch_brave_rp.bat`) in your project or workspace working directory `<BRIDGE_DIR>` (e.g. `d:\AI` or `.\bridge`).
+
+**For the full command reference and all capabilities, read the `playwright-cli` skill at `.agents/skills/playwright-cli/SKILL.md`.** That skill is the authoritative guide — this document only covers how to set up and route commands through the bridge.
 
 ---
 
@@ -56,7 +58,7 @@ try {
 
 - **If it succeeds:** Proceed to Step 2.
 - **If it fails:** Ask the user to open their browser in debug mode:
-  > *"Please open the browser with remote debugging enabled (e.g., run `d:\AI\launch_brave_rp.bat` or start the browser with `--remote-debugging-port=9222`). Let me know when it's ready."*
+  > *"Please open the browser with remote debugging enabled (e.g., run `launch_brave_rp.bat` from `<BRIDGE_DIR>` or start the browser with `--remote-debugging-port=9222`). Let me know when it's ready."*
 
 ### Step 2 — Start bridge server and attach
 
@@ -65,7 +67,7 @@ try {
 try {
     Invoke-WebRequest -Uri "http://127.0.0.1:8080/health" -TimeoutSec 3 -ErrorAction Stop
 } catch {
-    Start-Process python -ArgumentList "d:\AI\pw_bridge_server.py" -WindowStyle Hidden
+    Start-Process python -ArgumentList "<BRIDGE_DIR>\pw_bridge_server.py" -WindowStyle Hidden
     Start-Sleep -Seconds 2
 }
 
@@ -82,5 +84,5 @@ After this, all `pw-bridge.bat` commands will route to the attached browser.
 1. **Use the `playwright-cli` skill for everything.** That skill has the full command reference, all examples, all patterns, all reference docs. This skill only tells you how to connect.
 2. **Replace `playwright-cli` with `.\pw-bridge.bat`** in all commands when working through the bridge. The syntax is identical otherwise.
 3. **Never write custom Python/JS scripts** to automate the browser. The CLI already has `run-code`, `eval`, `screenshot`, `requests`, and everything else you need.
-4. **All bridge commands run from `d:\AI`** — that's where `pw-bridge.bat` lives.
+4. **All bridge commands run from `<BRIDGE_DIR>`** — where `pw-bridge.bat` lives.
 5. **Always snapshot after actions** to verify page state before proceeding.
