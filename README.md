@@ -105,6 +105,20 @@ Minimum content for `wiki/log.md`:
 *Append-only audit trail. Never delete entries.*
 ```
 
+### Step 5 — Set up the Playwright bridge (optional)
+
+If you want browser automation through the persistent CLI bridge, copy the `bridge/` files to a working directory (e.g., `d:\AI` or `~/ai-bridge`):
+
+```
+bridge/
+├── pw-bridge.bat           # Entry point — run all commands through this
+├── pw-bridge.ps1           # PowerShell script that proxies to the bridge server
+├── pw_bridge_server.py     # Persistent Python server that holds the browser connection
+└── launch_brave_rp.bat     # Launches Brave with --remote-debugging-port=9222
+```
+
+Then update the paths in `playwright-cli-bridge/SKILL.md` to match wherever you placed these files.
+
 ---
 
 ## How It Works
@@ -229,6 +243,13 @@ your-project/
     ├── design.md
     ├── FRONTEND_DESIGN_SPEC.md
     └── TASKS.md
+
+# Bridge files (copy to a working directory, e.g., d:\AI)
+bridge/
+├── pw-bridge.bat                     # CLI entry point
+├── pw-bridge.ps1                     # PowerShell proxy
+├── pw_bridge_server.py               # Persistent bridge server
+└── launch_brave_rp.bat               # Browser launcher with debug port
 
 # Global (installed once, works across all projects)
 ~/.gemini/config/
