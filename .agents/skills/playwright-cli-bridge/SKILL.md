@@ -20,7 +20,7 @@ The bridge (`pw-bridge.bat`) connects `playwright-cli` to the **user's visible b
 3. **NEVER fall back to npx.** If the bridge or browser is not available, **stop and ask the user**. Do not attempt `npx playwright`, `npx --no-install`, or any npm-based workaround.
 4. **NEVER write custom scripts** to automate the browser. The CLI provides everything you need.
 5. **Always snapshot after actions** to verify page state before proceeding.
-6. **NEVER run inline PowerShell with `$` variables.** The outer shell strips `$` variable references, causing parse errors. Always use scratch `.ps1` files instead (see Setup section).
+6. **Use scratch `.ps1` files for port and bridge checks.** The port check and bridge check commands use `$tcp` variables that get stripped when run as inline `-Command` strings. Always run them from scratch files (see Setup section).
 
 ---
 
