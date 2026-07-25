@@ -10,6 +10,9 @@ echo   Remote debugging on port 9222
 echo  ==========================================
 echo.
 
+rem Cache %PROGRAMFILES(X86)% early — its parentheses break if-blocks if used directly inside them
+set "PFILES86=%ProgramFiles(x86)%"
+
 set BRAVE_EXE=
 
 rem Check standard installation locations for Brave
@@ -17,26 +20,24 @@ if exist "%LOCALAPPDATA%\BraveSoftware\Brave-Browser\Application\brave.exe" (
     set "BRAVE_EXE=%LOCALAPPDATA%\BraveSoftware\Brave-Browser\Application\brave.exe"
 ) else if exist "%PROGRAMFILES%\BraveSoftware\Brave-Browser\Application\brave.exe" (
     set "BRAVE_EXE=%PROGRAMFILES%\BraveSoftware\Brave-Browser\Application\brave.exe"
-) else if exist "%PROGRAMFILES(X86)%\BraveSoftware\Brave-Browser\Application\brave.exe" (
-    set "BRAVE_EXE=%PROGRAMFILES(X86)%\BraveSoftware\Brave-Browser\Application\brave.exe"
+) else if exist "%PFILES86%\BraveSoftware\Brave-Browser\Application\brave.exe" (
+    set "BRAVE_EXE=%PFILES86%\BraveSoftware\Brave-Browser\Application\brave.exe"
 )
 
 if "%BRAVE_EXE%"=="" (
-    echo  [ERROR] Could not automatically find brave.exe in standard locations:
+    echo  [ERROR] Could not automatically find brave.exe in any of these locations:
     echo    - %LOCALAPPDATA%\BraveSoftware\Brave-Browser\Application\brave.exe
     echo    - %PROGRAMFILES%\BraveSoftware\Brave-Browser\Application\brave.exe
-    echo    - %PROGRAMFILES(X86)%\BraveSoftware\Brave-Browser\Application\brave.exe
+    echo    - %PFILES86%\BraveSoftware\Brave-Browser\Application\brave.exe
     echo.
-    echo  Please edit this batch file to point to your brave.exe location.
+    echo  Please edit this batch file and set BRAVE_EXE manually at the top.
+    echo.
     pause
     exit /b 1
 )
 
-echo  Found Brave at: "%BRAVE_EXE%"
-start "" "%BRAVE_EXE%" ^
-  --remote-debugging-port=9222 ^
-  --no-first-run ^
-  --no-default-browser-check
+echo  Found Brave at: %BRAVE_EXE%
+start "" "%BRAVE_EXE%" --remote-debugging-port=9222 --no-first-run --no-default-browser-check
 
 echo  [OK] Brave launched!
 echo  [OK] CDP listening on http://127.0.0.1:9222
