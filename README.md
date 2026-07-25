@@ -15,12 +15,13 @@ your-project/
 │   ├── rules/
 │   │   ├── coding-conventions.md
 │   │   └── graphify-template.md       ← rename to graphify.md after setup
-│   ├── skills/                        # 11 project-scoped skills
+│   ├── skills/                        # 12 project-scoped skills
 │   │   ├── graphify/
 │   │   ├── playwright-cli/
 │   │   ├── playwright-cli-bridge/
 │   │   ├── ponytail/
 │   │   ├── project-planner/
+│   │   ├── skill-creator/
 │   │   ├── subagent-dispatch/
 │   │   ├── wiki-crystallize/
 │   │   ├── wiki-ingest/
