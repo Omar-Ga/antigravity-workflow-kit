@@ -20,6 +20,7 @@ The bridge (`pw-bridge.bat`) connects `playwright-cli` to the **user's visible b
 3. **NEVER fall back to npx.** If the bridge or browser is not available, **stop and ask the user**. Do not attempt `npx playwright`, `npx --no-install`, or any npm-based workaround.
 4. **NEVER write custom scripts** to automate the browser. The CLI provides everything you need.
 5. **Always snapshot after actions** to verify page state before proceeding.
+6. **NEVER run inline PowerShell with `$` variables.** The outer shell strips `$` variable references, causing parse errors. Always use scratch `.ps1` files instead (see Setup section).
 
 ---
 
@@ -42,9 +43,28 @@ Every `playwright-cli` command works identically through the bridge. Replace `pl
 
 ## Setup — Attaching to the User's Browser
 
-### Step 1 — Check if browser debug port is open
+> ⚠️ **Why scratch files?** PowerShell `$variable` references get stripped when run as inline `-Command` strings through the agent's shell layer. This causes cryptic `"An expression was expected after '('"` errors. The fix is to save the PowerShell code as `.ps1` files in the scratch directory and run them with `powershell -File`.
 
-Use a quick TCP port check. **Do NOT use `Invoke-WebRequest`** — it hangs on refused connections in PowerShell.
+### Scratch Directory
+
+The scratch directory is your conversation's scratch folder:
+
+```
+<appDataDir>\brain\<conversation-id>\scratch\
+```
+
+Before starting setup, check if the helper scripts already exist:
+1. `scratch/check_port.ps1`
+2. `scratch/check_bridge.ps1`
+
+**If they exist** — skip creation and use them directly.
+**If they don't exist** — create them with the exact contents below.
+
+---
+
+### Step 1 — Ensure `check_port.ps1` exists
+
+Check if `scratch/check_port.ps1` exists in your scratch directory. If not, create it with this exact content:
 
 ```powershell
 $tcp = New-Object System.Net.Sockets.TcpClient
@@ -57,16 +77,25 @@ try {
 }
 ```
 
-- **If it succeeds:** Proceed to Step 2.
-- **If it fails:** Stop and ask the user:
+Then run it:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File "<appDataDir>\brain\<conversation-id>\scratch\check_port.ps1"
+```
+
+- **If output is `"Browser debug session found on port 9222."`** — Proceed to Step 2.
+- **If output is `"No browser debug session found on port 9222."`** — Stop and ask the user:
   > *"I don't see a browser running with remote debugging. Please run `.\bridge\launch_brave_rp.bat` to open Brave with the debug port, then let me know when it's ready."*
 
   **Do NOT try to launch the browser yourself. Do NOT fall back to npx or playwright-cli open. Wait for the user.**
 
-### Step 2 — Start bridge server and attach
+---
+
+### Step 2 — Ensure `check_bridge.ps1` exists
+
+Check if `scratch/check_bridge.ps1` exists in your scratch directory. If not, create it with this exact content:
 
 ```powershell
-# Check if bridge server is running (quick TCP check, same pattern)
 $tcp = New-Object System.Net.Sockets.TcpClient
 try {
     $tcp.Connect("127.0.0.1", 8080)
@@ -77,8 +106,19 @@ try {
     Start-Process python -ArgumentList ".\bridge\pw_bridge_server.py" -WindowStyle Hidden
     Start-Sleep -Seconds 2
 }
+```
 
-# Attach to the user's browser
+Then run it:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File "<appDataDir>\brain\<conversation-id>\scratch\check_bridge.ps1"
+```
+
+---
+
+### Step 3 — Attach to the user's browser
+
+```powershell
 .\bridge\pw-bridge.bat attach --cdp=http://localhost:9222
 ```
 
