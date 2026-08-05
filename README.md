@@ -1,6 +1,6 @@
 # Antigravity Workflow Kit
 
-A complete, copy-paste AI agent workflow system for software projects. Drop the `.agents/` folder directly into any project root to immediately equip your AI assistant with persistent memory, structured project planning, codebase intelligence, browser automation, and disciplined sub-agent orchestration.
+A complete, AI agent workflow system for software projects. Drop the `.agents/` folder directly into any project root to immediately equip your AI assistant with persistent memory, structured project planning, codebase intelligence, browser automation, and disciplined sub-agent orchestration.
 
 ---
 
@@ -14,9 +14,14 @@ your-project/
 │   ├── AGENTS.md
 │   ├── rules/
 │   │   ├── coding-conventions.md
-│   │   └── graphify-template.md       ← rename to graphify.md after setup
-│   ├── skills/                        # 12 project-scoped skills
+│   │   ├── graphify-template.md       ← rename to graphify.md after setup
+│   │   └── pinchtab_gui_launch.md     ← Windows Task Scheduler GUI launcher rule
+│   ├── skills/                        # 16 project-scoped skills
 │   │   ├── graphify/
+│   │   ├── pinchtab/
+│   │   ├── pinchtab-mcp/
+│   │   ├── pinchtab-opt/
+│   │   ├── pinchtab-stealth-score/
 │   │   ├── playwright-cli/
 │   │   ├── playwright-cli-bridge/
 │   │   ├── ponytail/
@@ -52,6 +57,7 @@ your-project/
 | **Project Planner** | A wizard that generates PRD → Design → Frontend Spec → Tasks (with intra-phase ordering) |
 | **Graphify Integration** | AST-based codebase knowledge graph — query relationships, trace call chains |
 | **Sub-agent Dispatch** | Persona-based specialist agents for research, debugging, QA, and verification |
+| **PinchTab Integration** | High-performance Go browser automation (`pinchtab`, `pinchtab-mcp`, `pinchtab-opt`, `pinchtab-stealth-score`) + `schtasks` desktop GUI launcher rule |
 | **Playwright CLI & Bridge** | Complete browser automation suite + CDP bridge to attach to live browser sessions |
 | **Task Workflows** | `/start-phase`, `/verify`, `/mark-off` — structured phase-by-phase development |
 | **Wiki Workflows** | `/wiki-audit`, `/wiki-review` — keep the knowledge base accurate and current |
