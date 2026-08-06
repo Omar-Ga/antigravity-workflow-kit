@@ -94,8 +94,8 @@ param(
 
 $configPath = "C:\Users\Omar\AppData\Roaming\pinchtab\config.json"
 $accounts = @{
-    "omargamalsvc"  = "C:\\Users\\Omar\\AppData\\Local\\Google\\Chrome\\PinchTab User Data"
-    "oomarolayan"   = "C:\\Users\\Omar\\AppData\\Local\\Google\\Chrome\\PinchTab User Data - oomarolayan"
+    "omargamalsvc"  = 'C:\Users\Omar\AppData\Local\Google\Chrome\PinchTab User Data'
+    "oomarolayan"   = 'C:\Users\Omar\AppData\Local\Google\Chrome\PinchTab User Data - oomarolayan'
 }
 
 $baseDir = $accounts[$Account]
