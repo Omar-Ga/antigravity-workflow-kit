@@ -16,9 +16,11 @@ your-project/
 │   │   ├── coding-conventions.md
 │   │   ├── graphify-template.md       ← rename to graphify.md after setup
 │   │   └── pinchtab_gui_launch.md     ← Windows Task Scheduler GUI launcher rule
-│   ├── skills/                        # 16 project-scoped skills
+│   ├── skills/                        # 17 project-scoped skills
 │   │   ├── graphify/
 │   │   ├── pinchtab/
+│   │   ├── pinchtab-account-setup/
+│   │   ├── pinchtab-flow-images/
 │   │   ├── pinchtab-mcp/
 │   │   ├── pinchtab-opt/
 │   │   ├── pinchtab-stealth-score/
@@ -57,7 +59,7 @@ your-project/
 | **Project Planner** | A wizard that generates PRD → Design → Frontend Spec → Tasks (with intra-phase ordering) |
 | **Graphify Integration** | AST-based codebase knowledge graph — query relationships, trace call chains |
 | **Sub-agent Dispatch** | Persona-based specialist agents for research, debugging, QA, and verification |
-| **PinchTab Integration** | High-performance Go browser automation (`pinchtab`, `pinchtab-mcp`, `pinchtab-opt`, `pinchtab-stealth-score`) + `schtasks` desktop GUI launcher rule |
+| **PinchTab Integration** | High-performance Go browser automation (`pinchtab`, `pinchtab-account-setup`, `pinchtab-flow-images`, `pinchtab-mcp`, `pinchtab-opt`, `pinchtab-stealth-score`) + `schtasks` desktop GUI launcher rule |
 | **Playwright CLI & Bridge** | Complete browser automation suite + CDP bridge to attach to live browser sessions |
 | **Task Workflows** | `/start-phase`, `/verify`, `/mark-off` — structured phase-by-phase development |
 | **Wiki Workflows** | `/wiki-audit`, `/wiki-review` — keep the knowledge base accurate and current |
@@ -114,6 +116,78 @@ bridge/
 ├── pw_bridge_server.py     # Persistent Python server that holds the browser connection
 └── launch_brave_rp.bat     # Launches Brave with --remote-debugging-port=9222
 ```
+
+---
+
+## PinchTab Setup & Multi-Account Workflow (Optional)
+
+PinchTab is a high-performance Go browser automation engine. It isolates automation sessions in dedicated Chrome profile folders so your main browser tabs and profiles remain 100% untouched.
+
+### 1. MCP Configuration
+To connect PinchTab to your AI editor (Antigravity, Claude, Cursor, Windsurf, etc.), add this block to your `mcp_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "pinchtab": {
+      "command": "pinchtab",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+> **Note**: No personal directories or hardcoded user paths belong in `mcp_config.json`. PinchTab automatically resolves its active profile directory from `%APPDATA%\pinchtab\config.json`.
+
+### 2. First-Run Setup & Task Scheduler Rule
+On Windows, launching PinchTab directly from a background subshell causes desktop process isolation (`0xc0000142` error). Per `.agents/rules/pinchtab_gui_launch.md`, PinchTab must be launched via Task Scheduler:
+
+1. Create a Windows Task Scheduler task named `LaunchPinchTabGUI`:
+   - **Program**: `pinchtab.exe` (or full path to binary)
+   - **Arguments**: `server`
+   - **Options**: Run only when user is logged on (Interactive Desktop Session).
+2. Always trigger PinchTab via Task Scheduler:
+   ```powershell
+   schtasks /Run /TN "LaunchPinchTabGUI"
+   ```
+
+### 3. Account Setup & Isolation Flow (`pinchtab-account-setup`)
+
+#### First-Time Account Setup
+1. **Create a dedicated profile directory** (separate from your personal Chrome `User Data`):
+   ```powershell
+   New-Item -ItemType Directory -Path "$env:LOCALAPPDATA\Google\Chrome\PinchTab User Data" -Force
+   ```
+2. **Point `config.json` (`%APPDATA%\pinchtab\config.json`) to the directory**:
+   ```json
+   {
+     "profiles": {
+       "baseDir": "C:\\Users\\<username>\\AppData\\Local\\Google\\Chrome\\PinchTab User Data",
+       "defaultProfile": "default",
+       "quarantineKeep": 1
+     }
+   }
+   ```
+3. **Launch PinchTab & Sign In (One-Time Only)**:
+   ```powershell
+   schtasks /Run /TN "LaunchPinchTabGUI"
+   pinchtab nav https://accounts.google.com/
+   ```
+   Sign into your target Google account inside the open browser window.
+4. **Close Gracefully**:
+   Click the **X** button on the browser window to close it gracefully (writing `"exit_type": "Normal"` to avoid crash recovery bubbles). The encrypted session is saved permanently in that isolated directory.
+
+#### Adding More Accounts & Switching Workflow
+1. **Create an isolated directory for each new account**:
+   - e.g., `PinchTab User Data - account2`
+2. **Switch active accounts**:
+   Run the account switcher script (`switch-account.ps1`) provided in `.agents/skills/pinchtab-account-setup/SKILL.md`:
+   ```powershell
+   & "$env:APPDATA\pinchtab\switch-account.ps1" -Account <nickname>
+   ```
+   The script gracefully terminates active PinchTab processes, patches `profiles.baseDir` in `config.json`, and relaunches PinchTab via `schtasks`.
+3. **One-Time Sign In**:
+   Sign in once inside the newly pointed profile directory and close gracefully. Every future `pinchtab` launch will open directly into that account.
 
 ---
 
