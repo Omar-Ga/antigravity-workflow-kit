@@ -20,10 +20,11 @@ if ($accounts.ContainsKey($Account)) {
     $targetDir = $config.profiles.baseDir
 }
 
-# Launch standalone Chrome stripped of all automation switches and banners
+# Launch standalone Chrome directly into Default profile, skipping Profile Picker
 $chromePath = "C:\Program Files\Google\Chrome\Application\chrome.exe"
 $chromeArgs = @(
     "--user-data-dir=`"$targetDir`"",
+    "--profile-directory=`"Default`"",
     "--disable-blink-features=AutomationControlled",
     "--excludeSwitches=enable-automation"
 )
