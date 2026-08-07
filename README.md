@@ -21,6 +21,7 @@ your-project/
 │   │   ├── pinchtab/
 │   │   ├── pinchtab-account-setup/
 │   │   ├── pinchtab-flow-images/
+│   │   ├── pinchtab-manual-auth/
 │   │   ├── pinchtab-mcp/
 │   │   ├── pinchtab-opt/
 │   │   ├── pinchtab-stealth-score/
