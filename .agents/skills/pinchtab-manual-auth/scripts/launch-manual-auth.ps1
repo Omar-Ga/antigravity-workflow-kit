@@ -8,7 +8,7 @@ $accounts = @{
     "oomarolayan"   = "$env:LOCALAPPDATA\Google\Chrome\PinchTab User Data - oomarolayan"
 }
 
-# Stop active PinchTab daemon and Chrome instances
+# Stop active PinchTab daemon and Chrome instances completely
 Get-Process chrome,pinchtab-windows-amd64 -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 Start-Sleep -Seconds 2
 
@@ -20,7 +20,13 @@ if ($accounts.ContainsKey($Account)) {
     $targetDir = $config.profiles.baseDir
 }
 
-# Launch standalone Chrome without remote debugging flags
+# Launch standalone Chrome stripped of all automation switches and banners
 $chromePath = "C:\Program Files\Google\Chrome\Application\chrome.exe"
-Start-Process $chromePath -ArgumentList "--user-data-dir=`"$targetDir`""
-Write-Host "Opened manual Chrome session for profile: $targetDir" -ForegroundColor Green
+$chromeArgs = @(
+    "--user-data-dir=`"$targetDir`"",
+    "--disable-blink-features=AutomationControlled",
+    "--excludeSwitches=enable-automation"
+)
+
+Start-Process $chromePath -ArgumentList $chromeArgs
+Write-Host "Opened un-monitored manual Chrome session for profile: $targetDir" -ForegroundColor Green
