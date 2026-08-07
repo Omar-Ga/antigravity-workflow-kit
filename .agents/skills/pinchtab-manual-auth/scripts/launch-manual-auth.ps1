@@ -22,11 +22,13 @@ if ($accounts.ContainsKey($Account)) {
     $baseDir = $config.profiles.baseDir
 }
 
-# Launch standalone Chrome using proper Chrome argument structure:
-# --user-data-dir = root folder
-# --profile-directory = profile subfolder
 $chromePath = "C:\Program Files\Google\Chrome\Application\chrome.exe"
-$argString = "--user-data-dir=`"$baseDir`" --profile-directory=`"$defaultProfile`" --disable-blink-features=AutomationControlled --excludeSwitches=enable-automation"
+$chromeArgs = @(
+    "--user-data-dir=$baseDir",
+    "--profile-directory=$defaultProfile",
+    "--disable-blink-features=AutomationControlled",
+    "--excludeSwitches=enable-automation"
+)
 
-Start-Process $chromePath -ArgumentList $argString
+Start-Process $chromePath -ArgumentList $chromeArgs
 Write-Host "Opened manual Chrome session for profile: $baseDir\$defaultProfile" -ForegroundColor Green
