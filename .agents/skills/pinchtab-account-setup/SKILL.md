@@ -116,8 +116,8 @@ Write-Host "Switched to: $Account ($baseDir)" -ForegroundColor Green
 
 ### Usage
 ```powershell
-& "C:\Users\Omar\AppData\Roaming\pinchtab\switch-account.ps1" -Account omargamalsvc
-& "C:\Users\Omar\AppData\Roaming\pinchtab\switch-account.ps1" -Account oomarolayan
+& ".agents/skills/pinchtab-account-setup/scripts/switch-account.ps1" -Account omargamalsvc
+& ".agents/skills/pinchtab-account-setup/scripts/switch-account.ps1" -Account oomarolayan
 ```
 
 ### Adding a New Account
