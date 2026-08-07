@@ -16,12 +16,11 @@ your-project/
 │   │   ├── coding-conventions.md
 │   │   ├── graphify-template.md       ← rename to graphify.md after setup
 │   │   └── pinchtab_gui_launch.md     ← Windows Task Scheduler GUI launcher rule
-│   ├── skills/                        # 17 project-scoped skills
+│   ├── skills/                        # 16 project-scoped skills
 │   │   ├── graphify/
 │   │   ├── pinchtab/
 │   │   ├── pinchtab-account-setup/
 │   │   ├── pinchtab-flow-images/
-│   │   ├── pinchtab-manual-auth/
 │   │   ├── pinchtab-mcp/
 │   │   ├── pinchtab-opt/
 │   │   ├── pinchtab-stealth-score/
