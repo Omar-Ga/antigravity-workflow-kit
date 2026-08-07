@@ -21,8 +21,10 @@ if ($accounts.ContainsKey($Account)) {
     $baseDir = $config.profiles.baseDir
 }
 
-$chromePath = "C:\Program Files\Google\Chrome\Application\chrome.exe"
-$userDirArg = "--user-data-dir=`"$baseDir`""
+# Write launcher batch file
+$batContent = "@echo off`r`ntaskkill /F /IM chrome.exe /IM pinchtab-windows-amd64.exe 2>nul`r`ntimeout /t 1 /nobreak >nul`r`nstart `"`" `"C:\Program Files\Google\Chrome\Application\chrome.exe`" --user-data-dir=`"$baseDir`""
+[System.IO.File]::WriteAllText("$env:APPDATA\pinchtab\launch-manual.bat", $batContent)
 
-Start-Process $chromePath -ArgumentList $userDirArg
-Write-Host "Opened un-monitored manual Chrome session for profile: $baseDir" -ForegroundColor Green
+# Trigger Task Scheduler (GUI Session launcher)
+schtasks /Run /TN "LaunchManualChrome" | Out-Null
+Write-Host "Opened un-monitored manual Chrome GUI session for profile: $baseDir" -ForegroundColor Green
