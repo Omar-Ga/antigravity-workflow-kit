@@ -12,22 +12,26 @@ $accounts = @{
 Get-Process chrome,pinchtab-windows-amd64 -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 Start-Sleep -Seconds 2
 
-# Determine target profile directory
+# Read config.json
+$config = Get-Content $configPath -Raw | ConvertFrom-Json
+$defaultProfile = if ($config.profiles.defaultProfile) { $config.profiles.defaultProfile } else { "default" }
+
 if ($accounts.ContainsKey($Account)) {
-    $targetDir = $accounts[$Account]
+    $baseDir = $accounts[$Account]
 } else {
-    $config = Get-Content $configPath -Raw | ConvertFrom-Json
-    $targetDir = $config.profiles.baseDir
+    $baseDir = $config.profiles.baseDir
 }
 
-# Launch standalone Chrome directly into Default profile, skipping Profile Picker
+# PinchTab joins baseDir + defaultProfile
+$fullProfilePath = Join-Path $baseDir $defaultProfile
+
+# Launch standalone Chrome directly into full profile directory without automation flags
 $chromePath = "C:\Program Files\Google\Chrome\Application\chrome.exe"
 $chromeArgs = @(
-    "--user-data-dir=`"$targetDir`"",
-    "--profile-directory=`"Default`"",
+    "--user-data-dir=`"$fullProfilePath`"",
     "--disable-blink-features=AutomationControlled",
     "--excludeSwitches=enable-automation"
 )
 
 Start-Process $chromePath -ArgumentList $chromeArgs
-Write-Host "Opened un-monitored manual Chrome session for profile: $targetDir" -ForegroundColor Green
+Write-Host "Opened un-monitored manual Chrome session for profile: $fullProfilePath" -ForegroundColor Green
