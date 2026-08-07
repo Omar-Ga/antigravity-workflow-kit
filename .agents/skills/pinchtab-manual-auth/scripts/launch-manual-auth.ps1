@@ -14,7 +14,6 @@ Start-Sleep -Seconds 2
 
 # Read config.json
 $config = Get-Content $configPath -Raw | ConvertFrom-Json
-$defaultProfile = if ($config.profiles.defaultProfile) { $config.profiles.defaultProfile } else { "default" }
 
 if ($accounts.ContainsKey($Account)) {
     $baseDir = $accounts[$Account]
@@ -23,11 +22,7 @@ if ($accounts.ContainsKey($Account)) {
 }
 
 $chromePath = "C:\Program Files\Google\Chrome\Application\chrome.exe"
-
-# Pass arguments with explicit inner quotes so Windows command line preserves path quotes around paths with spaces
 $userDirArg = "--user-data-dir=`"$baseDir`""
-$profileArg = "--profile-directory=`"$defaultProfile`""
-$stealthArg = "--disable-blink-features=AutomationControlled"
 
-Start-Process $chromePath -ArgumentList $userDirArg, $profileArg, $stealthArg
-Write-Host "Opened manual Chrome session for profile: $baseDir\$defaultProfile" -ForegroundColor Green
+Start-Process $chromePath -ArgumentList $userDirArg
+Write-Host "Opened un-monitored manual Chrome session for profile: $baseDir" -ForegroundColor Green
