@@ -22,16 +22,11 @@ if ($accounts.ContainsKey($Account)) {
     $baseDir = $config.profiles.baseDir
 }
 
-# PinchTab joins baseDir + defaultProfile
-$fullProfilePath = Join-Path $baseDir $defaultProfile
-
-# Launch standalone Chrome directly into full profile directory without automation flags
+# Launch standalone Chrome using proper Chrome argument structure:
+# --user-data-dir = root folder
+# --profile-directory = profile subfolder
 $chromePath = "C:\Program Files\Google\Chrome\Application\chrome.exe"
-$chromeArgs = @(
-    "--user-data-dir=`"$fullProfilePath`"",
-    "--disable-blink-features=AutomationControlled",
-    "--excludeSwitches=enable-automation"
-)
+$argString = "--user-data-dir=`"$baseDir`" --profile-directory=`"$defaultProfile`" --disable-blink-features=AutomationControlled --excludeSwitches=enable-automation"
 
-Start-Process $chromePath -ArgumentList $chromeArgs
-Write-Host "Opened un-monitored manual Chrome session for profile: $fullProfilePath" -ForegroundColor Green
+Start-Process $chromePath -ArgumentList $argString
+Write-Host "Opened manual Chrome session for profile: $baseDir\$defaultProfile" -ForegroundColor Green
