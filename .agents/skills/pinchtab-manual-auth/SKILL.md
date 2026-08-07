@@ -18,7 +18,7 @@ This skill allows the agent to launch standard, un-monitored Chrome directly int
 ## Workflow
 
 ### Step 1 — Stop PinchTab & Launch Manual Chrome
-Execute the PowerShell script `C:\Users\Omar\AppData\Roaming\pinchtab\launch-manual-auth.ps1` (or run inline):
+Execute the PowerShell script `.agents/skills/pinchtab-manual-auth/scripts/launch-manual-auth.ps1` (or run inline):
 
 ```powershell
 # Stop active PinchTab and Chrome processes

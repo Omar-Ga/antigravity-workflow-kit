@@ -83,7 +83,7 @@ The session is now permanently saved. Every future `pinchtab server` launch will
 ## Multi-Account Switching
 
 ### The Switcher Script
-Save this as `C:\Users\Omar\AppData\Roaming\pinchtab\switch-account.ps1`:
+Save this as `.agents/skills/pinchtab-account-setup/scripts/switch-account.ps1`:
 
 ```powershell
 param(
