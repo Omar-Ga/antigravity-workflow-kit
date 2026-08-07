@@ -23,12 +23,11 @@ if ($accounts.ContainsKey($Account)) {
 }
 
 $chromePath = "C:\Program Files\Google\Chrome\Application\chrome.exe"
-$chromeArgs = @(
-    "--user-data-dir=$baseDir",
-    "--profile-directory=$defaultProfile",
-    "--disable-blink-features=AutomationControlled",
-    "--excludeSwitches=enable-automation"
-)
 
-Start-Process $chromePath -ArgumentList $chromeArgs
+# Pass arguments with explicit inner quotes so Windows command line preserves path quotes around paths with spaces
+$userDirArg = "--user-data-dir=`"$baseDir`""
+$profileArg = "--profile-directory=`"$defaultProfile`""
+$stealthArg = "--disable-blink-features=AutomationControlled"
+
+Start-Process $chromePath -ArgumentList $userDirArg, $profileArg, $stealthArg
 Write-Host "Opened manual Chrome session for profile: $baseDir\$defaultProfile" -ForegroundColor Green
