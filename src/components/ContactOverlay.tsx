@@ -5,6 +5,10 @@ import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import styles from './ContactOverlay.module.css';
 
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(useGSAP);
+}
+
 interface ContactOverlayProps {
   isOpen: boolean;
   onClose: () => void;
@@ -66,7 +70,7 @@ export default function ContactOverlay({ isOpen, onClose }: ContactOverlayProps)
         delay: 0.3
       });
     }
-  }, [isOpen]);
+  }, { scope: overlayRef, dependencies: [isOpen] });
 
   useGSAP(() => {
     if (isVideoLoaded && videoRef.current) {
@@ -76,7 +80,37 @@ export default function ContactOverlay({ isOpen, onClose }: ContactOverlayProps)
         { opacity: 1, duration: 0.8, ease: "power2.out", force3D: true }
       );
     }
-  }, [isVideoLoaded]);
+  }, { scope: overlayRef, dependencies: [isVideoLoaded] });
+
+  // Desktop Video Mouse Parallax (only enabled when fine pointer/hover present)
+  useGSAP((context, contextSafe) => {
+    if (!videoRef.current) return;
+
+    gsap.set(videoRef.current, { scale: 1.08 });
+
+    const mm = gsap.matchMedia();
+
+    mm.add("(hover: hover)", () => {
+      const videoXTo = gsap.quickTo(videoRef.current, "x", { duration: 1.2, ease: "power2" });
+      const videoYTo = gsap.quickTo(videoRef.current, "y", { duration: 1.2, ease: "power2" });
+
+      const onMouseMove = contextSafe!((e: MouseEvent) => {
+        if (!isOpen) return;
+        const { clientX, clientY } = e;
+        const { innerWidth, innerHeight } = window;
+        const globalNx = (clientX / innerWidth) * 2 - 1;
+        const globalNy = (clientY / innerHeight) * 2 - 1;
+
+        videoXTo(-globalNx * 30);
+        videoYTo(-globalNy * 30);
+      });
+
+      window.addEventListener("mousemove", onMouseMove as EventListener, { passive: true });
+      return () => window.removeEventListener("mousemove", onMouseMove as EventListener);
+    });
+
+    return () => mm.revert();
+  }, { scope: overlayRef, dependencies: [isOpen] });
 
   return (
     <section 
@@ -98,7 +132,12 @@ export default function ContactOverlay({ isOpen, onClose }: ContactOverlayProps)
         }}
       >
         {shouldLoadVideo && (
-          <source src="/dark_cropped.webm" type="video/webm" />
+          <>
+            <source src="/dark_cropped_mobile.webm" type="video/webm" media="(max-width: 768px)" />
+            <source src="/dark_cropped_mobile.mp4" type="video/mp4" media="(max-width: 768px)" />
+            <source src="/dark_cropped.webm" type="video/webm" />
+            <source src="/dark_cropped.mp4" type="video/mp4" />
+          </>
         )}
       </video>
 

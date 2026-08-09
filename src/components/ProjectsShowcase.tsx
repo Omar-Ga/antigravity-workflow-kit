@@ -87,11 +87,11 @@ const SERVICES = [
       }
     ],
     images: [
-      "/images/services/systems/systems_1.jpg",
-      "/images/services/systems/systems_2.jpg",
-      "/images/services/systems/systems_3.jpg",
-      "/images/services/systems/systems_4.jpg",
-      "/images/services/systems/systems_5.jpg"
+      "/images/services/systems/systems_1.webp",
+      "/images/services/systems/systems_2.webp",
+      "/images/services/systems/systems_3.webp",
+      "/images/services/systems/systems_4.webp",
+      "/images/services/systems/systems_5.webp"
     ]
   },
   {
@@ -127,11 +127,11 @@ const SERVICES = [
       }
     ],
     images: [
-      "/images/services/ai/ai_1.jpg",
-      "/images/services/ai/ai_2.jpg",
-      "/images/services/ai/ai_3.jpg",
-      "/images/services/ai/ai_4.jpg",
-      "/images/services/ai/ai_5.jpg"
+      "/images/services/ai/ai_1.webp",
+      "/images/services/ai/ai_2.webp",
+      "/images/services/ai/ai_3.webp",
+      "/images/services/ai/ai_4.webp",
+      "/images/services/ai/ai_5.webp"
     ]
   }
 ];

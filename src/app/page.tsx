@@ -226,7 +226,9 @@ export default function Home() {
               }
             }}
           >
+            <source src="/light_web_mobile.webm" type="video/webm" media="(max-width: 768px)" />
             <source src="/light_web_mobile.mp4" type="video/mp4" media="(max-width: 768px)" />
+            <source src="/light_web.webm" type="video/webm" />
             <source src="/light_web.mp4" type="video/mp4" />
           </video>
 
