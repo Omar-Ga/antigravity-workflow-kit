@@ -12,9 +12,9 @@ import SidebarNav from "@/components/SidebarNav";
 import MobileNav from "@/components/MobileNav";
 import HeroSection from "@/components/HeroSection";
 import GlobalNav from "@/components/GlobalNav";
-import ProjectsShowcase from "@/components/ProjectsShowcase";
+import ServicesSection from "@/components/ServicesSection";
 import StorySection from "@/components/StorySection";
-import CapabilitiesSection from "@/components/CapabilitiesSection";
+import ProjectsSection from "@/components/ProjectsSection";
 import ContactOverlay from "@/components/ContactOverlay";
 import styles from './page.module.css';
 
@@ -246,14 +246,14 @@ export default function Home() {
         {/* Invisible Scrub Spacer for Curtain Reveal — 500vh adapts dynamically to screen height */}
         <div className="gsap-scrub-spacer" style={{ height: "500vh", position: "relative", zIndex: 0 }}></div>
 
-        {/* Projects Showcase & About Section merged */}
-        {isLoaded && <ProjectsShowcase />}
+        {/* Services Section */}
+        {isLoaded && <ServicesSection />}
 
-        {/* Post-Animation Continuation */}
+        {/* Story / About Section */}
         {isLoaded && <StorySection />}
 
-        {/* Capabilities / Services */}
-        {isLoaded && <CapabilitiesSection />}
+        {/* Projects Section */}
+        {isLoaded && <ProjectsSection />}
 
         {/* Custom Scroll Progress Bar */}
         {isLoaded && (

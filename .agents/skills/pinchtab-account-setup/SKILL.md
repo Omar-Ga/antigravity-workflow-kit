@@ -64,6 +64,7 @@ Edit `C:\Users\Omar\AppData\Roaming\pinchtab\config.json`:
 ```powershell
 schtasks /Run /TN "LaunchPinchTabGUI"
 ```
+> **CRITICAL**: The `LaunchPinchTabGUI` scheduled task must be configured to run `pinchtab server`. If it is instead configured to run `pinchtab instance start`, it **MUST** include the `--profile default` flag (e.g. `pinchtab instance start --mode headed --profile default`). If you omit the profile flag, PinchTab will generate an ephemeral blank profile and the account will appear signed out!
 
 ### 4. Sign in manually — ONE TIME ONLY
 ```powershell

@@ -5,47 +5,63 @@ import dynamic from 'next/dynamic';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useLenis } from 'lenis/react';
 import RippleCanvas from './RippleCanvas';
-import styles from './CapabilitiesSection.module.css';
+import styles from './ProjectsSection.module.css';
 
 const AudioBlob = dynamic(() => import('./AudioBlob'), { ssr: false });
 const WebGLShader = dynamic(() => import('./ui/web-gl-shader').then((m) => m.WebGLShader), { ssr: false });
 
 gsap.registerPlugin(ScrollTrigger);
 
-const PROJECTS = [
+interface Project {
+  id: string;
+  title: string;
+  description: string;
+  image: string;
+  keywords: string[];
+}
+
+const PROJECTS: Project[] = [
   {
     id: 'p1',
     title: 'SkyCourt Warehouse Engine',
     description: 'Offline-first enterprise logistics & inventory management platform powered by Turso LibSQL embedded replicas, real-time barcode scanning, and multi-platform desktop/web deployment.',
-    image: '/images/skycourt/skycourt_1.webp'
+    image: '/images/skycourt/skycourt_1.webp',
+    keywords: ['Turso LibSQL', 'Embedded Replicas', 'Barcode Telemetry', 'Tauri Desktop']
   },
   {
     id: 'p2',
     title: "Kafa'a AI Talent Platform",
     description: 'An enterprise AI recruitment SaaS that parses unstructured CV resumes, calculates multi-variable candidate match scores, and orchestrates automated AI candidate interviews.',
-    image: '/images/kafaa/kafaa_1.webp'
+    image: '/images/kafaa/kafaa_1.webp',
+    keywords: ['Enterprise AI SaaS', 'CV Resume Parser', 'Match Score Engine', 'Automated Interviews']
   },
   {
     id: 'p3',
     title: 'O2Mation Flagship Web',
     description: 'Bespoke, agency-grade web platforms. High-impact visual design, fluid GSAP motion, and high-converting architecture built for enterprise scale.',
-    image: '/images/o2mation/o2mation_1.webp'
+    image: '/images/o2mation/o2mation_1.webp',
+    keywords: ['Fluid GSAP Motion', 'WebGL Shaders', 'Next.js App Router', 'Luxury Design System']
   },
   {
     id: 'p4',
     title: "Voice AI & Intelligent Agents",
     description: 'Skip the contact form. Ask me anything — my AI assistant knows my stack, my work, and my availability. Press the button and speak.',
-    image: '/images/services/strategy.webp'
+    image: '/images/services/strategy.webp',
+    keywords: ['Real-Time WebRTC', 'Voice AI Assistant', 'SIP Telephony', 'Autonomous Agents']
   }
 ];
 
 const PROJECT_IMAGES = PROJECTS.map(p => p.image);
 
-export default function CapabilitiesSection() {
+export default function ProjectsSection() {
   const sectionRef = useRef<HTMLElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const textRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const snapPointsRef = useRef<number[]>([]);
+  const isClickScrollingRef = useRef<boolean>(false);
+  const lenis = useLenis();
 
   const [activeImage, setActiveImage] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
@@ -65,6 +81,37 @@ export default function CapabilitiesSection() {
       window.removeEventListener('resize', checkMobile);
     };
   }, []);
+
+  const handleThumbnailClick = (idx: number) => {
+    isClickScrollingRef.current = true;
+    setActiveImage(idx);
+    if (!sectionRef.current) {
+      isClickScrollingRef.current = false;
+      return;
+    }
+    const st = ScrollTrigger.getById("projects-st");
+    if (st) {
+      const snapProgress = snapPointsRef.current[idx] !== undefined
+        ? snapPointsRef.current[idx]
+        : (idx / (PROJECTS.length - 1));
+      const targetScroll = st.start + (st.end - st.start) * snapProgress;
+      if (lenis) {
+        lenis.scrollTo(targetScroll, {
+          duration: 0.8,
+          onComplete: () => {
+            isClickScrollingRef.current = false;
+          }
+        });
+      } else {
+        window.scrollTo({ top: targetScroll, behavior: 'smooth' });
+        setTimeout(() => {
+          isClickScrollingRef.current = false;
+        }, 800);
+      }
+    } else {
+      isClickScrollingRef.current = false;
+    }
+  };
 
   useGSAP(() => {
     if (!sectionRef.current || !listRef.current) return;
@@ -87,9 +134,11 @@ export default function CapabilitiesSection() {
       const progress = -targetY / Math.max(1, maxScrollY);
       return Math.max(0, Math.min(1, progress));
     });
+    snapPointsRef.current = snapPoints;
 
     const tl = gsap.timeline({
       scrollTrigger: {
+        id: "projects-st",
         trigger: sectionRef.current,
         pin: true,
         anticipatePin: 1,
@@ -99,9 +148,24 @@ export default function CapabilitiesSection() {
         refreshPriority: 6,
         invalidateOnRefresh: true,
         snap: {
-          snapTo: snapPoints,
-          duration: { min: 0.3, max: 0.8 },
-          ease: "power2.inOut"
+          snapTo: (value: number) => {
+            const points = snapPointsRef.current;
+            if (!points || points.length === 0) return value;
+            let closest = points[0];
+            let minDiff = Math.abs(value - points[0]);
+            for (let i = 1; i < points.length; i++) {
+              const diff = Math.abs(value - points[i]);
+              if (diff < minDiff) {
+                minDiff = diff;
+                closest = points[i];
+              }
+            }
+            return closest;
+          },
+          directional: false,
+          delay: 0.1,
+          duration: { min: 0.2, max: 0.5 },
+          ease: "power2.out"
         },
         onUpdate: function(self) {
           // Pure math calculations without reading live DOM layout
@@ -139,7 +203,7 @@ export default function CapabilitiesSection() {
             });
           });
 
-          if (minDistance < 40) {
+          if (!isClickScrollingRef.current) {
             setActiveImage((prev) => (prev !== closestIdx ? closestIdx : prev));
           }
         }
@@ -156,9 +220,9 @@ export default function CapabilitiesSection() {
   }, { scope: sectionRef });
 
   return (
-    <section className={styles.capabilitiesSection} ref={sectionRef} id="projects">
+    <section className={styles.projectsSection} ref={sectionRef} id="projects">
       {!isMobile && <WebGLShader />}
-      <div className={styles.capabilitiesContainer} style={{ position: 'relative' }}>
+      <div className={styles.projectsContainer} style={{ position: 'relative' }}>
         
         {/* LEFT: Projects 3D Wheel */}
         <div className={styles.servicesListWrapper}>
@@ -178,7 +242,7 @@ export default function CapabilitiesSection() {
           </div>
         </div>
 
-        {/* RIGHT: WebGL Canvas / Audio AI Blob / Mobile Static Image */}
+        {/* CENTER: WebGL Canvas / Audio AI Blob / Mobile Static Image */}
         <div className={styles.visualCanvas}>
           {activeImage === 3 ? (
             <AudioBlob />
@@ -194,6 +258,45 @@ export default function CapabilitiesSection() {
               activeIndex={Math.min(activeImage, 2)}
             />
           )}
+        </div>
+
+        {/* RIGHT: Keywords & Vertical Preview Thumbnails with Active Dash */}
+        <div className={styles.projectMetaWidget}>
+          {/* Tech Stack & Feature Keywords */}
+          <div className={styles.keywordsBlock}>
+            <span className={styles.keywordsHeader}>Tech & Stack</span>
+            <div className={styles.keywordsList}>
+              {PROJECTS[activeImage]?.keywords.map((kw, i) => (
+                <span key={i} className={styles.keywordItem}>
+                  {kw}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Thumbnail Strip with Active Dash Indicator */}
+          <div className={styles.thumbnailStrip}>
+            <div 
+              className={styles.activeDash}
+              style={{ transform: `translateY(${activeImage * 56 + 10}px)` }}
+              aria-hidden="true"
+            >
+              —
+            </div>
+            <div className={styles.thumbnailList}>
+              {PROJECTS.map((p, idx) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  className={`${styles.thumbnailItem} ${activeImage === idx ? styles.thumbnailActive : ''}`}
+                  onClick={() => handleThumbnailClick(idx)}
+                  title={`Jump to ${p.title}`}
+                >
+                  <img src={p.image} alt={p.title} className={styles.thumbnailImg} />
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
       </div>

@@ -87,6 +87,8 @@ If a site requires a CAPTCHA, anti-bot challenge, or other human verification, s
 
 Patterns: (1) one-off `pinchtab instance start`; (2) reuse profile `instance start --profile work --mode headed`, switch to headless after login; (3) HTTP `POST /profiles` then `POST /profiles/<name>/start`; (4) human-assisted headed login, agent reuses headless. Agent sessions: `pinchtab session create --agent-id <id>` or `POST /sessions` → set `PINCHTAB_SESSION=ses_...`.
 
+> **CRITICAL PROFILE WARNING**: `pinchtab instance start` inherently creates a **blank, ephemeral profile** if you do not specify a profile name. If you are trying to use a persistent Google account or saved config (e.g., via the `pinchtab-account-setup` skill), you **MUST** include `--profile default` (e.g. `pinchtab instance start --mode headed --profile default`). Otherwise, you will be inexplicably logged out because you are in a throwaway session.
+
 **Session reuse safety:** When reusing authenticated browser sessions established by a human, use a dedicated low-privilege profile — not the user's personal browsing profile. Confirm with the user before performing account-changing actions (password changes, payment, deletion, permissions) in a reused session. Restrict navigation to the sites needed for the task.
 
 ## Configuration

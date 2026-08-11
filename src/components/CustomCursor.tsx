@@ -18,9 +18,9 @@ export default function CustomCursor() {
 
     if (!isHoverDevice || !cursorDot) return;
 
-    gsap.set(cursorDot, { xPercent: -50, yPercent: -50 });
-    const dotXTo = gsap.quickTo(cursorDot, "x", { duration: 0.05, ease: "power3" });
-    const dotYTo = gsap.quickTo(cursorDot, "y", { duration: 0.05, ease: "power3" });
+    gsap.set(cursorDot, { xPercent: -50, yPercent: -50, force3D: true });
+    const setX = gsap.quickSetter(cursorDot, "x", "px");
+    const setY = gsap.quickSetter(cursorDot, "y", "px");
 
     // Reveal cursor element
     gsap.set(cursorDot, { autoAlpha: 1 });
@@ -29,11 +29,11 @@ export default function CustomCursor() {
     document.body.classList.add("hide-default-cursor");
 
     const onMouseMove = (e: MouseEvent) => {
-      dotXTo(e.clientX);
-      dotYTo(e.clientY);
+      setX(e.clientX);
+      setY(e.clientY);
     };
 
-    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mousemove", onMouseMove, { passive: true });
 
     return () => {
       window.removeEventListener("mousemove", onMouseMove);

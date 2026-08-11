@@ -6,7 +6,7 @@ import { useGSAP } from "@gsap/react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Flip } from "gsap/Flip";
 import { useLenis } from 'lenis/react';
-import styles from "./ProjectsShowcase.module.css";
+import styles from "./ServicesSection.module.css";
 
 // Register plugins
 if (typeof window !== "undefined") {
@@ -235,7 +235,7 @@ const ServicePanel = React.memo(({ service }: { service: typeof SERVICES[0] }) =
 
 ServicePanel.displayName = "ServicePanel";
 
-export default function ProjectsShowcase() {
+export default function ServicesSection() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const leftHalfRef = useRef<HTMLDivElement>(null);

@@ -70,6 +70,8 @@ agents.md
 .playwright-cli/
 mcp-playwright/
 scratch/
+screenshot-*.jpg
+
 
 
 
