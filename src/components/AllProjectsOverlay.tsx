@@ -201,6 +201,46 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
     }
   }, { scope: overlayRef, dependencies: [isOpen] });
 
+  // Dynamic Scroll Wheel Acceleration & Inertia Deceleration
+  useEffect(() => {
+    if (!isOpen || selectedProject) return;
+
+    let decayTween: gsap.core.Tween | null = null;
+
+    const handleWheel = (e: WheelEvent) => {
+      // Prevent default window scroll while navigating archive grid
+      e.preventDefault();
+
+      const delta = e.deltaY;
+      const boostMultiplier = Math.sign(delta) * Math.min(Math.max(Math.abs(delta) * 0.04, 2.5), 7.5);
+
+      if (decayTween) decayTween.kill();
+
+      const speedObj = { speed: boostMultiplier };
+
+      if (driftLeftTlRef.current) driftLeftTlRef.current.timeScale(boostMultiplier);
+      if (driftRightTlRef.current) driftRightTlRef.current.timeScale(boostMultiplier);
+
+      // Smoothly decelerate back to normal speed (1.0) over 0.8s
+      decayTween = gsap.to(speedObj, {
+        speed: 1.0,
+        duration: 0.8,
+        ease: "power2.out",
+        onUpdate: () => {
+          if (driftLeftTlRef.current) driftLeftTlRef.current.timeScale(speedObj.speed);
+          if (driftRightTlRef.current) driftRightTlRef.current.timeScale(speedObj.speed);
+        }
+      });
+    };
+
+    window.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      window.removeEventListener('wheel', handleWheel);
+      if (decayTween) decayTween.kill();
+    };
+  }, [isOpen, selectedProject]);
+
+
   // Handle Card Click (Push-Aside Transition to Detail View)
   const handleCardClick = (project: DetailedProject) => {
     setSelectedProject(project);
