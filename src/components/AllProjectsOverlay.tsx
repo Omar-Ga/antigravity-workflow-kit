@@ -224,11 +224,12 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
       const rightSpeed = (baseSpeed + rightVelocityRef.current) * dt * hoverDamping;
       rightPosRef.current += rightSpeed;
 
-      // Wrap positions using modulo so they never hit a boundary
-      // For leftPos (going negative): wrap when it goes below -half back toward 0
+      // Wrap positions using modulo so they never hit a boundary.
+      // Both formulas handle bidirectional scrolling (wheel can push either direction).
+      // Left (moving negative): wraps in range [-half, 0)
       leftPosRef.current = ((leftPosRef.current % half) + half) % half - half;
-      // For rightPos (going positive): wrap when it exceeds 0 back toward -half  
-      rightPosRef.current = (rightPosRef.current % half) - half;
+      // Right (moving positive): wraps in range [0, half)
+      rightPosRef.current = ((rightPosRef.current % half) + half) % half;
 
       // Apply transforms directly (no GSAP tween, pure set for 0 overhead)
       if (colLeftRef.current) {
