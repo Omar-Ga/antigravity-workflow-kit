@@ -16,6 +16,7 @@ import ServicesSection from "@/components/ServicesSection";
 import StorySection from "@/components/StorySection";
 import ProjectsSection from "@/components/ProjectsSection";
 import ContactOverlay from "@/components/ContactOverlay";
+import AllProjectsOverlay from "@/components/AllProjectsOverlay";
 import styles from './page.module.css';
 
 if (typeof window !== "undefined") {
@@ -28,8 +29,10 @@ export default function Home() {
   const heroVideoRef = useRef<HTMLVideoElement>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isContactOpen, setIsContactOpen] = useState(false);
+  const [isArchiveOpen, setIsArchiveOpen] = useState(false);
   const [isHeroVideoLoaded, setIsHeroVideoLoaded] = useState(false);
   const lenis = useLenis();
+
 
   // Auto-pause Hero video when user scrolls off-screen
   useEffect(() => {
@@ -113,12 +116,20 @@ export default function Home() {
     }
   }, [lenis, isLoaded]);
 
-  // Listen for the global 'open-contact' event fired by any nav on the page
+  // Listen for the global 'open-contact' and 'open-archive' events fired on the page
   useEffect(() => {
     const handleOpenContact = () => setIsContactOpen(true);
+    const handleOpenArchive = () => setIsArchiveOpen(true);
+
     window.addEventListener('open-contact', handleOpenContact);
-    return () => window.removeEventListener('open-contact', handleOpenContact);
+    window.addEventListener('open-archive', handleOpenArchive);
+
+    return () => {
+      window.removeEventListener('open-contact', handleOpenContact);
+      window.removeEventListener('open-archive', handleOpenArchive);
+    };
   }, []);
+
   
   // Environmental Lighting Shift when Contact overlay opens
   useGSAP(() => {
@@ -264,8 +275,10 @@ export default function Home() {
       </div>
 
       <ContactOverlay isOpen={isContactOpen} onClose={() => setIsContactOpen(false)} />
+      <AllProjectsOverlay isOpen={isArchiveOpen} onClose={() => setIsArchiveOpen(false)} />
       <CustomCursor />
     </>
   );
 }
+
 

@@ -272,6 +272,17 @@ export default function ProjectsSection() {
                 </span>
               ))}
             </div>
+
+            <button 
+              className={styles.exploreArchiveBtn}
+              onClick={() => {
+                const event = new CustomEvent('open-archive');
+                window.dispatchEvent(event);
+              }}
+              title="Explore All Projects Archive"
+            >
+              Explore All Projects ↗
+            </button>
           </div>
 
           {/* Thumbnail Strip with Active Dash Indicator */}
