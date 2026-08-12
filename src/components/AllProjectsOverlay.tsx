@@ -137,6 +137,8 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
   const overlayRef = useRef<HTMLDivElement>(null);
   const colLeftRef = useRef<HTMLDivElement>(null);
   const colRightRef = useRef<HTMLDivElement>(null);
+  const viewportLeftRef = useRef<HTMLDivElement>(null);
+  const viewportRightRef = useRef<HTMLDivElement>(null);
   const heroCardRef = useRef<HTMLDivElement>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const lenis = useLenis();
@@ -280,16 +282,16 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
     // Pause the ticker drift
     isPausedRef.current = true;
 
-    // Push slanted columns off-screen left and right
-    if (colLeftRef.current && colRightRef.current) {
-      gsap.to(colLeftRef.current, {
+    // Push viewport containers off-screen left and right
+    if (viewportLeftRef.current && viewportRightRef.current) {
+      gsap.to(viewportLeftRef.current, {
         xPercent: -140,
         opacity: 0,
         duration: 0.8,
         ease: "power3.inOut"
       });
 
-      gsap.to(colRightRef.current, {
+      gsap.to(viewportRightRef.current, {
         xPercent: 140,
         opacity: 0,
         duration: 0.8,
@@ -329,9 +331,9 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
       });
     }
 
-    // Bring slanted columns back in from left/right
-    if (colLeftRef.current && colRightRef.current) {
-      gsap.to([colLeftRef.current, colRightRef.current], {
+    // Bring viewport containers back in from left/right
+    if (viewportLeftRef.current && viewportRightRef.current) {
+      gsap.to([viewportLeftRef.current, viewportRightRef.current], {
         xPercent: 0,
         opacity: 1,
         duration: 0.8,
@@ -386,58 +388,62 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
         {/* Slanted Opposing Columns Container */}
         <div className={styles.slantedContainer}>
           
-          {/* Left Column (Drifting Upwards) */}
-          <div 
-            className={styles.columnTrack}
-            ref={colLeftRef}
+          {/* Left Track Viewport (clips overflow for seamless loop) */}
+          <div
+            className={styles.trackViewport}
+            ref={viewportLeftRef}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
           >
-            {leftColumnProjects.map((p, idx) => (
-              <div 
-                key={`left-${p.id}-${idx}`}
-                className={styles.card}
-                onClick={() => handleCardClick(p)}
-              >
-                <img src={p.image} alt={p.title} className={styles.cardImage} />
-                <div className={styles.cardOverlay}>
-                  <span className={styles.cardCategory}>{p.number} — {p.category}</span>
-                  <h3 className={styles.cardTitle}>{p.title}</h3>
-                  <div className={styles.cardKeywords}>
-                    {p.keywords.slice(0, 3).map((kw, i) => (
-                      <span key={i} className={styles.keywordBadge}>{kw}</span>
-                    ))}
+            <div className={styles.columnTrack} ref={colLeftRef}>
+              {leftColumnProjects.map((p, idx) => (
+                <div 
+                  key={`left-${p.id}-${idx}`}
+                  className={styles.card}
+                  onClick={() => handleCardClick(p)}
+                >
+                  <img src={p.image} alt={p.title} className={styles.cardImage} />
+                  <div className={styles.cardOverlay}>
+                    <span className={styles.cardCategory}>{p.number} — {p.category}</span>
+                    <h3 className={styles.cardTitle}>{p.title}</h3>
+                    <div className={styles.cardKeywords}>
+                      {p.keywords.slice(0, 3).map((kw, i) => (
+                        <span key={i} className={styles.keywordBadge}>{kw}</span>
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
-          {/* Right Column (Drifting Downwards) */}
-          <div 
-            className={styles.columnTrack}
-            ref={colRightRef}
+          {/* Right Track Viewport (clips overflow for seamless loop) */}
+          <div
+            className={styles.trackViewport}
+            ref={viewportRightRef}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
           >
-            {rightColumnProjects.map((p, idx) => (
-              <div 
-                key={`right-${p.id}-${idx}`}
-                className={styles.card}
-                onClick={() => handleCardClick(p)}
-              >
-                <img src={p.image} alt={p.title} className={styles.cardImage} />
-                <div className={styles.cardOverlay}>
-                  <span className={styles.cardCategory}>{p.number} — {p.category}</span>
-                  <h3 className={styles.cardTitle}>{p.title}</h3>
-                  <div className={styles.cardKeywords}>
-                    {p.keywords.slice(0, 3).map((kw, i) => (
-                      <span key={i} className={styles.keywordBadge}>{kw}</span>
-                    ))}
+            <div className={styles.columnTrack} ref={colRightRef}>
+              {rightColumnProjects.map((p, idx) => (
+                <div 
+                  key={`right-${p.id}-${idx}`}
+                  className={styles.card}
+                  onClick={() => handleCardClick(p)}
+                >
+                  <img src={p.image} alt={p.title} className={styles.cardImage} />
+                  <div className={styles.cardOverlay}>
+                    <span className={styles.cardCategory}>{p.number} — {p.category}</span>
+                    <h3 className={styles.cardTitle}>{p.title}</h3>
+                    <div className={styles.cardKeywords}>
+                      {p.keywords.slice(0, 3).map((kw, i) => (
+                        <span key={i} className={styles.keywordBadge}>{kw}</span>
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
         </div>

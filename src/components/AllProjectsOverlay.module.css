@@ -112,9 +112,17 @@
   transition: transform 0.5s ease-out;
 }
 
-/* Vertical Track Column */
-.columnTrack {
+/* Clipping Viewport for Each Column Track — overflow:hidden makes the seamless loop invisible */
+.trackViewport {
+  position: relative;
   width: 440px;
+  height: 140vh;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+/* Vertical Track Column (moves inside the viewport) */
+.columnTrack {
   display: flex;
   flex-direction: column;
   gap: 3rem;
@@ -435,7 +443,7 @@
     gap: 2rem;
     transform: rotate(-2deg) skewY(-1deg);
   }
-  .columnTrack {
+  .trackViewport {
     width: 340px;
   }
   .card {
@@ -457,7 +465,7 @@
     gap: 1.5rem;
     transform: rotate(0deg) skewY(0deg);
   }
-  .columnTrack {
+  .trackViewport {
     width: 280px;
   }
   .card {
