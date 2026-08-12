@@ -175,7 +175,7 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
         driftLeftTlRef.current = gsap.timeline({ repeat: -1 })
           .to(colLeftRef.current, {
             y: "-50%",
-            duration: 25,
+            duration: 12,
             ease: "none"
           });
 
@@ -183,7 +183,7 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
         driftRightTlRef.current = gsap.timeline({ repeat: -1 })
           .fromTo(colRightRef.current, 
             { y: "-50%" },
-            { y: "0%", duration: 25, ease: "none" }
+            { y: "0%", duration: 12, ease: "none" }
           );
       }
     } else {
@@ -212,7 +212,7 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
       e.preventDefault();
 
       const delta = e.deltaY;
-      const boostMultiplier = Math.sign(delta) * Math.min(Math.max(Math.abs(delta) * 0.04, 2.5), 7.5);
+      const boostMultiplier = Math.sign(delta) * Math.min(Math.max(Math.abs(delta) * 0.1, 5.0), 18.0);
 
       if (decayTween) decayTween.kill();
 
@@ -221,10 +221,10 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
       if (driftLeftTlRef.current) driftLeftTlRef.current.timeScale(boostMultiplier);
       if (driftRightTlRef.current) driftRightTlRef.current.timeScale(boostMultiplier);
 
-      // Smoothly decelerate back to normal speed (1.0) over 0.8s
+      // Smoothly decelerate back to normal speed (1.0) over 0.9s
       decayTween = gsap.to(speedObj, {
         speed: 1.0,
-        duration: 0.8,
+        duration: 0.9,
         ease: "power2.out",
         onUpdate: () => {
           if (driftLeftTlRef.current) driftLeftTlRef.current.timeScale(speedObj.speed);
@@ -239,6 +239,7 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
       if (decayTween) decayTween.kill();
     };
   }, [isOpen, selectedProject]);
+
 
 
   // Handle Card Click (Push-Aside Transition to Detail View)
