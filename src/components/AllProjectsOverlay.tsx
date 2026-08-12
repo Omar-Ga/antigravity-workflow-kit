@@ -142,8 +142,16 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
   const lenis = useLenis();
 
   const [selectedProject, setSelectedProject] = useState<DetailedProject | null>(null);
-  const driftLeftTlRef = useRef<gsap.core.Timeline | null>(null);
-  const driftRightTlRef = useRef<gsap.core.Timeline | null>(null);
+
+  // Mutable refs for the ticker-based infinite drift engine
+  const leftPosRef = useRef<number>(0);
+  const rightPosRef = useRef<number>(0);
+  const leftVelocityRef = useRef<number>(0);
+  const rightVelocityRef = useRef<number>(0);
+  const baseSpeed = 3; // pixels per frame at 60fps
+  const halfHeightRef = useRef<number>(0);
+  const isPausedRef = useRef<boolean>(false);
+  const isHoveringRef = useRef<boolean>(false);
 
   // Split projects into 2 columns (3 projects each, duplicated for seamless loop)
   const leftColumnProjects = [...ALL_PROJECTS.slice(0, 3), ...ALL_PROJECTS.slice(0, 3)];
@@ -157,98 +165,119 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
     }
   }, [isOpen, lenis]);
 
-  // Main entrance & infinite drifting loop setup
+  // Main entrance animation (fade in/out only)
   useGSAP(() => {
     if (!overlayRef.current) return;
 
     if (isOpen) {
-      // Fade in main overlay container
       gsap.to(overlayRef.current, {
         autoAlpha: 1,
         duration: 0.6,
         ease: "power2.out"
       });
-
-      // Infinite vertical drifting loops for left and right columns
-      if (colLeftRef.current && colRightRef.current) {
-        // Left Column: Drifts Upwards continuously
-        driftLeftTlRef.current = gsap.timeline({ repeat: -1 })
-          .to(colLeftRef.current, {
-            y: "-50%",
-            duration: 12,
-            ease: "none"
-          });
-
-        // Right Column: Drifts Downwards continuously
-        driftRightTlRef.current = gsap.timeline({ repeat: -1 })
-          .fromTo(colRightRef.current, 
-            { y: "-50%" },
-            { y: "0%", duration: 12, ease: "none" }
-          );
-      }
     } else {
-      // Fade out overlay
       gsap.to(overlayRef.current, {
         autoAlpha: 0,
         duration: 0.5,
         ease: "power2.in",
         onComplete: () => {
           setSelectedProject(null);
-          if (driftLeftTlRef.current) driftLeftTlRef.current.kill();
-          if (driftRightTlRef.current) driftRightTlRef.current.kill();
         }
       });
     }
   }, { scope: overlayRef, dependencies: [isOpen] });
 
-  // Dynamic Scroll Wheel Acceleration & Inertia Deceleration
+  // Ticker-Based Seamless Infinite Drift Engine
+  useEffect(() => {
+    if (!isOpen) return;
+
+    // Measure half the column height (the duplicated set) for wrapping
+    const measureHalf = () => {
+      if (colLeftRef.current) {
+        halfHeightRef.current = colLeftRef.current.scrollHeight / 2;
+      }
+    };
+    measureHalf();
+
+    // Reset positions and velocities on open
+    leftPosRef.current = 0;
+    rightPosRef.current = 0;
+    leftVelocityRef.current = 0;
+    rightVelocityRef.current = 0;
+    isPausedRef.current = false;
+
+    const tickerFn = (_time: number, deltaTime: number) => {
+      if (isPausedRef.current) return;
+
+      const half = halfHeightRef.current;
+      if (half === 0) return;
+
+      // Normalize deltaTime: GSAP gives ms, we want a 60fps-relative factor
+      const dt = deltaTime / 16.67;
+      const hoverDamping = isHoveringRef.current ? 0.15 : 1;
+
+      // Left column: base direction is upward (negative y), velocity adds on top
+      const leftSpeed = (baseSpeed + leftVelocityRef.current) * dt * hoverDamping;
+      leftPosRef.current -= leftSpeed;
+
+      // Right column: base direction is downward (positive y), velocity adds on top
+      const rightSpeed = (baseSpeed + rightVelocityRef.current) * dt * hoverDamping;
+      rightPosRef.current += rightSpeed;
+
+      // Wrap positions using modulo so they never hit a boundary
+      // For leftPos (going negative): wrap when it goes below -half back toward 0
+      leftPosRef.current = ((leftPosRef.current % half) + half) % half - half;
+      // For rightPos (going positive): wrap when it exceeds 0 back toward -half  
+      rightPosRef.current = (rightPosRef.current % half) - half;
+
+      // Apply transforms directly (no GSAP tween, pure set for 0 overhead)
+      if (colLeftRef.current) {
+        colLeftRef.current.style.transform = `translate3d(0, ${leftPosRef.current}px, 0)`;
+      }
+      if (colRightRef.current) {
+        colRightRef.current.style.transform = `translate3d(0, ${rightPosRef.current}px, 0)`;
+      }
+
+      // Decay wheel velocity back toward 0 each frame
+      leftVelocityRef.current *= 0.95;
+      rightVelocityRef.current *= 0.95;
+
+      // Snap tiny residual velocity to 0
+      if (Math.abs(leftVelocityRef.current) < 0.01) leftVelocityRef.current = 0;
+      if (Math.abs(rightVelocityRef.current) < 0.01) rightVelocityRef.current = 0;
+    };
+
+    gsap.ticker.add(tickerFn);
+
+    return () => {
+      gsap.ticker.remove(tickerFn);
+    };
+  }, [isOpen]);
+
+  // Scroll Wheel Velocity Injection
   useEffect(() => {
     if (!isOpen || selectedProject) return;
 
-    let decayTween: gsap.core.Tween | null = null;
-
     const handleWheel = (e: WheelEvent) => {
-      // Prevent default window scroll while navigating archive grid
       e.preventDefault();
-
-      const delta = e.deltaY;
-      const boostMultiplier = Math.sign(delta) * Math.min(Math.max(Math.abs(delta) * 0.1, 5.0), 18.0);
-
-      if (decayTween) decayTween.kill();
-
-      const speedObj = { speed: boostMultiplier };
-
-      if (driftLeftTlRef.current) driftLeftTlRef.current.timeScale(boostMultiplier);
-      if (driftRightTlRef.current) driftRightTlRef.current.timeScale(boostMultiplier);
-
-      // Smoothly decelerate back to normal speed (1.0) over 0.9s
-      decayTween = gsap.to(speedObj, {
-        speed: 1.0,
-        duration: 0.9,
-        ease: "power2.out",
-        onUpdate: () => {
-          if (driftLeftTlRef.current) driftLeftTlRef.current.timeScale(speedObj.speed);
-          if (driftRightTlRef.current) driftRightTlRef.current.timeScale(speedObj.speed);
-        }
-      });
+      const impulse = e.deltaY * 0.15;
+      // Both columns get an impulse; left goes in scroll direction, right goes opposite
+      leftVelocityRef.current += impulse;
+      rightVelocityRef.current += impulse;
     };
 
     window.addEventListener('wheel', handleWheel, { passive: false });
     return () => {
       window.removeEventListener('wheel', handleWheel);
-      if (decayTween) decayTween.kill();
     };
   }, [isOpen, selectedProject]);
-
-
 
   // Handle Card Click (Push-Aside Transition to Detail View)
   const handleCardClick = (project: DetailedProject) => {
     setSelectedProject(project);
 
-    // Slow down/pause drifting loops
-    if (driftLeftTlRef.current) driftLeftTlRef.current.pause();
-    if (driftRightTlRef.current) driftRightTlRef.current.pause();
+    // Pause the ticker drift
+    isPausedRef.current = true;
 
     // Push slanted columns off-screen left and right
     if (colLeftRef.current && colRightRef.current) {
@@ -284,7 +313,6 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
   // Close Detail View (Reverse Push-Aside Transition)
   const handleCloseDetail = () => {
     if (sidebarRef.current && heroCardRef.current) {
-      // Retract sidebar and hero card
       gsap.to(sidebarRef.current, {
         x: "100%",
         opacity: 0,
@@ -310,9 +338,10 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
         delay: 0.3,
         onComplete: () => {
           setSelectedProject(null);
-          // Resume drifting loops
-          if (driftLeftTlRef.current) driftLeftTlRef.current.resume();
-          if (driftRightTlRef.current) driftRightTlRef.current.resume();
+          // Resume ticker drift
+          isPausedRef.current = false;
+          leftVelocityRef.current = 0;
+          rightVelocityRef.current = 0;
         }
       });
     }
@@ -321,15 +350,13 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
   // Card Hover Speed Control
   const handleMouseEnter = () => {
     if (!selectedProject) {
-      if (driftLeftTlRef.current) driftLeftTlRef.current.timeScale(0.2);
-      if (driftRightTlRef.current) driftRightTlRef.current.timeScale(0.2);
+      isHoveringRef.current = true;
     }
   };
 
   const handleMouseLeave = () => {
     if (!selectedProject) {
-      if (driftLeftTlRef.current) driftLeftTlRef.current.timeScale(1);
-      if (driftRightTlRef.current) driftRightTlRef.current.timeScale(1);
+      isHoveringRef.current = false;
     }
   };
 
