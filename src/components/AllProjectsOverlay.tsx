@@ -133,31 +133,50 @@ interface AllProjectsOverlayProps {
   onClose: () => void;
 }
 
+/** Unique cards per column before the sequence repeats. */
+const UNIQUE_PER_COL = 3;
+/** How many times the unique set is duplicated in the DOM. The track must stay
+ *  taller than the container even when shifted a full period, so: 4 x (3 cards)
+ *  = 6288px of track vs a 1584px period — safe past 4K-tall displays. Only 6
+ *  unique image URLs are involved, so the extra copies cost nothing to fetch. */
+const TRACK_REPEATS = 4;
+/** Idle drift in px per frame at 60fps. */
+const BASE_SPEED = 3;
+/** Ceiling on wheel-injected velocity (px/frame) so fast flicks stay readable. */
+const MAX_VELOCITY = 90;
+
 export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverlayProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
-  const colLeftRef = useRef<HTMLDivElement>(null);
-  const colRightRef = useRef<HTMLDivElement>(null);
+  // Viewport wrappers own the push-aside transform; inner tracks own the drift
+  // transform. Separating them means the two never fight over `transform`.
   const viewportLeftRef = useRef<HTMLDivElement>(null);
   const viewportRightRef = useRef<HTMLDivElement>(null);
+  const colLeftRef = useRef<HTMLDivElement>(null);
+  const colRightRef = useRef<HTMLDivElement>(null);
   const heroCardRef = useRef<HTMLDivElement>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const lenis = useLenis();
 
   const [selectedProject, setSelectedProject] = useState<DetailedProject | null>(null);
 
-  // Mutable refs for the ticker-based infinite drift engine
-  const leftPosRef = useRef<number>(0);
-  const rightPosRef = useRef<number>(0);
-  const leftVelocityRef = useRef<number>(0);
-  const rightVelocityRef = useRef<number>(0);
-  const baseSpeed = 3; // pixels per frame at 60fps
-  const halfHeightRef = useRef<number>(0);
-  const isPausedRef = useRef<boolean>(false);
-  const isHoveringRef = useRef<boolean>(false);
+  // Infinite drift engine state. Positions are kept normalised to [0, period)
+  // so they can advance forever without ever reaching a boundary.
+  const leftPosRef = useRef(0);
+  const rightPosRef = useRef(0);
+  const leftVelRef = useRef(0);
+  const rightVelRef = useRef(0);
+  const periodRef = useRef(0);
+  const pausedRef = useRef(false);
+  const hoverTargetRef = useRef(1);
+  const hoverFactorRef = useRef(1);
 
-  // Split projects into 2 columns (3 projects each, duplicated for seamless loop)
-  const leftColumnProjects = [...ALL_PROJECTS.slice(0, 3), ...ALL_PROJECTS.slice(0, 3)];
-  const rightColumnProjects = [...ALL_PROJECTS.slice(3, 6), ...ALL_PROJECTS.slice(3, 6)];
+  // Split projects into 2 columns, each duplicated TRACK_REPEATS times
+  const leftColumnProjects = Array.from({ length: TRACK_REPEATS }, () =>
+    ALL_PROJECTS.slice(0, UNIQUE_PER_COL)
+  ).flat();
+  const rightColumnProjects = Array.from({ length: TRACK_REPEATS }, () =>
+    ALL_PROJECTS.slice(UNIQUE_PER_COL, UNIQUE_PER_COL * 2)
+  ).flat();
 
   // Lock Lenis scroll when overlay is open
   useEffect(() => {
@@ -167,11 +186,19 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
     }
   }, [isOpen, lenis]);
 
-  // Main entrance animation (fade in/out only)
+  // Main entrance / exit fade
   useGSAP(() => {
     if (!overlayRef.current) return;
 
     if (isOpen) {
+      // Clear any lingering push-aside offset from a previous detail view
+      if (viewportLeftRef.current && viewportRightRef.current) {
+        gsap.set([viewportLeftRef.current, viewportRightRef.current], {
+          xPercent: 0,
+          opacity: 1
+        });
+      }
+
       gsap.to(overlayRef.current, {
         autoAlpha: 1,
         duration: 0.6,
@@ -182,107 +209,137 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
         autoAlpha: 0,
         duration: 0.5,
         ease: "power2.in",
-        onComplete: () => {
-          setSelectedProject(null);
-        }
+        onComplete: () => setSelectedProject(null)
       });
     }
   }, { scope: overlayRef, dependencies: [isOpen] });
 
-  // Ticker-Based Seamless Infinite Drift Engine
+  // Ticker-driven seamless infinite drift.
+  //
+  // The loop period is measured from real card offsets rather than assumed to be
+  // half the track height — with flex `gap`, scrollHeight/2 is short by half a
+  // gap, and that mismatch is the visible snap. offsetTop of card[UNIQUE_PER_COL]
+  // minus card[0] is the exact repeat distance, gaps included.
   useEffect(() => {
     if (!isOpen) return;
 
-    // Measure half the column height (the duplicated set) for wrapping
-    const measureHalf = () => {
-      if (colLeftRef.current) {
-        halfHeightRef.current = colLeftRef.current.scrollHeight / 2;
-      }
+    const measurePeriod = () => {
+      const track = colLeftRef.current;
+      if (!track || track.children.length <= UNIQUE_PER_COL) return;
+      const first = track.children[0] as HTMLElement;
+      const wrapAt = track.children[UNIQUE_PER_COL] as HTMLElement;
+      periodRef.current = wrapAt.offsetTop - first.offsetTop;
     };
-    measureHalf();
 
-    // Reset positions and velocities on open
-    leftPosRef.current = 0;
-    rightPosRef.current = 0;
-    leftVelocityRef.current = 0;
-    rightVelocityRef.current = 0;
-    isPausedRef.current = false;
-
-    const tickerFn = (_time: number, deltaTime: number) => {
-      if (isPausedRef.current) return;
-
-      const half = halfHeightRef.current;
-      if (half === 0) return;
-
-      // Normalize deltaTime: GSAP gives ms, we want a 60fps-relative factor
-      const dt = deltaTime / 16.67;
-      const hoverDamping = isHoveringRef.current ? 0.15 : 1;
-
-      // Left column: base direction is upward (negative y), velocity adds on top
-      const leftSpeed = (baseSpeed + leftVelocityRef.current) * dt * hoverDamping;
-      leftPosRef.current -= leftSpeed;
-
-      // Right column: base direction is downward (positive y), velocity adds on top
-      const rightSpeed = (baseSpeed + rightVelocityRef.current) * dt * hoverDamping;
-      rightPosRef.current += rightSpeed;
-
-      // Wrap positions using modulo so they never hit a boundary.
-      // Both formulas handle bidirectional scrolling (wheel can push either direction).
-      // Left (moving negative): wraps in range [-half, 0)
-      leftPosRef.current = ((leftPosRef.current % half) + half) % half - half;
-      // Right (moving positive): wraps in range [0, half)
-      rightPosRef.current = ((rightPosRef.current % half) + half) % half;
-
-      // Apply transforms directly (no GSAP tween, pure set for 0 overhead)
+    const render = () => {
+      const period = periodRef.current;
+      if (!period) return;
+      // Both tracks stay within y ∈ [-period, 0]. Because the content repeats
+      // every `period`, y = 0 and y = -period are pixel-identical, so the wrap
+      // is invisible no matter how fast the track is moving.
       if (colLeftRef.current) {
-        colLeftRef.current.style.transform = `translate3d(0, ${leftPosRef.current}px, 0)`;
+        colLeftRef.current.style.transform =
+          `translate3d(0, ${-leftPosRef.current}px, 0)`;
       }
       if (colRightRef.current) {
-        colRightRef.current.style.transform = `translate3d(0, ${rightPosRef.current}px, 0)`;
+        colRightRef.current.style.transform =
+          `translate3d(0, ${rightPosRef.current - period}px, 0)`;
       }
-
-      // Decay wheel velocity back toward 0 each frame
-      leftVelocityRef.current *= 0.95;
-      rightVelocityRef.current *= 0.95;
-
-      // Snap tiny residual velocity to 0
-      if (Math.abs(leftVelocityRef.current) < 0.01) leftVelocityRef.current = 0;
-      if (Math.abs(rightVelocityRef.current) < 0.01) rightVelocityRef.current = 0;
     };
 
-    gsap.ticker.add(tickerFn);
+    measurePeriod();
+
+    // Reset engine state on open; offset the right track so the two columns
+    // don't read as mirrored.
+    leftPosRef.current = 0;
+    rightPosRef.current = periodRef.current * 0.35;
+    leftVelRef.current = 0;
+    rightVelRef.current = 0;
+    pausedRef.current = false;
+    hoverTargetRef.current = 1;
+    hoverFactorRef.current = 1;
+    render();
+
+    const tick = (_time: number, deltaTime: number) => {
+      const period = periodRef.current;
+      if (!period) return;
+
+      // Clamp dt so a tab refocus or dropped frame can't teleport the tracks
+      const dt = Math.min(deltaTime / 16.667, 3);
+
+      // Ease the hover slowdown in/out instead of snapping the speed
+      hoverFactorRef.current +=
+        (hoverTargetRef.current - hoverFactorRef.current) * Math.min(1, 0.12 * dt);
+
+      if (!pausedRef.current) {
+        const damp = hoverFactorRef.current;
+        leftPosRef.current += (BASE_SPEED + leftVelRef.current) * dt * damp;
+        rightPosRef.current += (BASE_SPEED + rightVelRef.current) * dt * damp;
+
+        // Floored modulo: keeps positions in [0, period) for either direction,
+        // so there is no start and no end to snap back to.
+        leftPosRef.current = ((leftPosRef.current % period) + period) % period;
+        rightPosRef.current = ((rightPosRef.current % period) + period) % period;
+
+        render();
+      }
+
+      // Frame-rate independent momentum decay
+      const decay = Math.pow(0.93, dt);
+      leftVelRef.current *= decay;
+      rightVelRef.current *= decay;
+      if (Math.abs(leftVelRef.current) < 0.02) leftVelRef.current = 0;
+      if (Math.abs(rightVelRef.current) < 0.02) rightVelRef.current = 0;
+    };
+
+    gsap.ticker.add(tick);
+
+    // Card height changes at breakpoints, so the period has to be re-measured
+    const handleResize = () => {
+      measurePeriod();
+      render();
+    };
+    window.addEventListener('resize', handleResize);
 
     return () => {
-      gsap.ticker.remove(tickerFn);
+      gsap.ticker.remove(tick);
+      window.removeEventListener('resize', handleResize);
     };
   }, [isOpen]);
 
-  // Scroll Wheel Velocity Injection
+  // Scroll wheel momentum injection
   useEffect(() => {
     if (!isOpen || selectedProject) return;
 
     const handleWheel = (e: WheelEvent) => {
+      // Prevent default window scroll while navigating the archive
       e.preventDefault();
-      const impulse = e.deltaY * 0.15;
-      // Both columns get an impulse; left goes in scroll direction, right goes opposite
-      leftVelocityRef.current += impulse;
-      rightVelocityRef.current += impulse;
+
+      // A positive impulse accelerates each track along its own natural
+      // direction; a negative one drives both in reverse.
+      const impulse = e.deltaY * 0.14;
+      leftVelRef.current = gsap.utils.clamp(
+        -MAX_VELOCITY, MAX_VELOCITY, leftVelRef.current + impulse
+      );
+      rightVelRef.current = gsap.utils.clamp(
+        -MAX_VELOCITY, MAX_VELOCITY, rightVelRef.current + impulse
+      );
     };
 
     window.addEventListener('wheel', handleWheel, { passive: false });
-    return () => {
-      window.removeEventListener('wheel', handleWheel);
-    };
+    return () => window.removeEventListener('wheel', handleWheel);
   }, [isOpen, selectedProject]);
+
+
 
   // Handle Card Click (Push-Aside Transition to Detail View)
   const handleCardClick = (project: DetailedProject) => {
     setSelectedProject(project);
 
-    // Pause the ticker drift
-    isPausedRef.current = true;
+    // Freeze the drift engine; position is preserved so resuming won't jump
+    pausedRef.current = true;
 
-    // Push viewport containers off-screen left and right
+    // Push slanted columns off-screen left and right
     if (viewportLeftRef.current && viewportRightRef.current) {
       gsap.to(viewportLeftRef.current, {
         xPercent: -140,
@@ -316,6 +373,7 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
   // Close Detail View (Reverse Push-Aside Transition)
   const handleCloseDetail = () => {
     if (sidebarRef.current && heroCardRef.current) {
+      // Retract sidebar and hero card
       gsap.to(sidebarRef.current, {
         x: "100%",
         opacity: 0,
@@ -331,7 +389,7 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
       });
     }
 
-    // Bring viewport containers back in from left/right
+    // Bring slanted columns back in from left/right
     if (viewportLeftRef.current && viewportRightRef.current) {
       gsap.to([viewportLeftRef.current, viewportRightRef.current], {
         xPercent: 0,
@@ -341,26 +399,21 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
         delay: 0.3,
         onComplete: () => {
           setSelectedProject(null);
-          // Resume ticker drift
-          isPausedRef.current = false;
-          leftVelocityRef.current = 0;
-          rightVelocityRef.current = 0;
+          // Resume the drift engine
+          hoverTargetRef.current = 1;
+          pausedRef.current = false;
         }
       });
     }
   };
 
-  // Card Hover Speed Control
+  // Card Hover Speed Control (eased by the ticker, not applied instantly)
   const handleMouseEnter = () => {
-    if (!selectedProject) {
-      isHoveringRef.current = true;
-    }
+    if (!selectedProject) hoverTargetRef.current = 0.15;
   };
 
   const handleMouseLeave = () => {
-    if (!selectedProject) {
-      isHoveringRef.current = false;
-    }
+    if (!selectedProject) hoverTargetRef.current = 1;
   };
 
   return (
@@ -388,7 +441,7 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
         {/* Slanted Opposing Columns Container */}
         <div className={styles.slantedContainer}>
           
-          {/* Left Track Viewport (clips overflow for seamless loop) */}
+          {/* Left Track (drifts upwards, infinitely) */}
           <div
             className={styles.trackViewport}
             ref={viewportLeftRef}
@@ -397,7 +450,7 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
           >
             <div className={styles.columnTrack} ref={colLeftRef}>
               {leftColumnProjects.map((p, idx) => (
-                <div 
+                <div
                   key={`left-${p.id}-${idx}`}
                   className={styles.card}
                   onClick={() => handleCardClick(p)}
@@ -417,7 +470,7 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
             </div>
           </div>
 
-          {/* Right Track Viewport (clips overflow for seamless loop) */}
+          {/* Right Track (drifts downwards, infinitely) */}
           <div
             className={styles.trackViewport}
             ref={viewportRightRef}
@@ -426,7 +479,7 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
           >
             <div className={styles.columnTrack} ref={colRightRef}>
               {rightColumnProjects.map((p, idx) => (
-                <div 
+                <div
                   key={`right-${p.id}-${idx}`}
                   className={styles.card}
                   onClick={() => handleCardClick(p)}

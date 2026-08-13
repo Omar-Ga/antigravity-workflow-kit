@@ -112,17 +112,23 @@
   transition: transform 0.5s ease-out;
 }
 
-/* Clipping Viewport for Each Column Track — overflow:hidden makes the seamless loop invisible */
+/* Positioning context for each track. Owns the push-aside transform so it never
+   competes with the per-frame drift transform on .columnTrack. */
 .trackViewport {
   position: relative;
   width: 440px;
-  height: 140vh;
-  overflow: hidden;
+  height: 100%;
   flex-shrink: 0;
+  will-change: transform;
 }
 
-/* Vertical Track Column (moves inside the viewport) */
+/* Vertical Track Column — absolutely positioned so its full (much taller than
+   viewport) height never feeds back into the flex layout. */
 .columnTrack {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: 3rem;
