@@ -4,6 +4,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { useLenis } from 'lenis/react';
+import ShimmeringBeamsBackground from './ui/ShimmeringBeamsBackground';
 import styles from './AllProjectsOverlay.module.css';
 
 if (typeof window !== "undefined") {
@@ -223,20 +224,22 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
   useEffect(() => {
     if (!isOpen) return;
 
-    const measurePeriod = () => {
+    const measurePeriod = (): boolean => {
       const track = colLeftRef.current;
-      if (!track || track.children.length <= UNIQUE_PER_COL) return;
+      if (!track || track.children.length <= UNIQUE_PER_COL) return false;
       const first = track.children[0] as HTMLElement;
       const wrapAt = track.children[UNIQUE_PER_COL] as HTMLElement;
-      periodRef.current = wrapAt.offsetTop - first.offsetTop;
+      if (!first || !wrapAt) return false;
+      const measured = wrapAt.offsetTop - first.offsetTop;
+      if (measured > 0) {
+        periodRef.current = measured;
+        return true;
+      }
+      return false;
     };
 
     const render = () => {
-      const period = periodRef.current;
-      if (!period) return;
-      // Both tracks stay within y ∈ [-period, 0]. Because the content repeats
-      // every `period`, y = 0 and y = -period are pixel-identical, so the wrap
-      // is invisible no matter how fast the track is moving.
+      const period = periodRef.current || 1584;
       if (colLeftRef.current) {
         colLeftRef.current.style.transform =
           `translate3d(0, ${-leftPosRef.current}px, 0)`;
@@ -247,10 +250,12 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
       }
     };
 
-    measurePeriod();
+    // Reset engine state on open
+    const hasMeasured = measurePeriod();
+    if (!hasMeasured) {
+      periodRef.current = 1584; // Safe fallback period until DOM layout resolves
+    }
 
-    // Reset engine state on open; offset the right track so the two columns
-    // don't read as mirrored.
     leftPosRef.current = 0;
     rightPosRef.current = periodRef.current * 0.35;
     leftVelRef.current = 0;
@@ -261,13 +266,12 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
     render();
 
     const tick = (_time: number, deltaTime: number) => {
-      const period = periodRef.current;
-      if (!period) return;
+      // Re-measure period if not accurately calculated yet
+      measurePeriod();
 
-      // Clamp dt so a tab refocus or dropped frame can't teleport the tracks
+      const period = periodRef.current || 1584;
       const dt = Math.min(deltaTime / 16.667, 3);
 
-      // Ease the hover slowdown in/out instead of snapping the speed
       hoverFactorRef.current +=
         (hoverTargetRef.current - hoverFactorRef.current) * Math.min(1, 0.12 * dt);
 
@@ -276,15 +280,12 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
         leftPosRef.current += (BASE_SPEED + leftVelRef.current) * dt * damp;
         rightPosRef.current += (BASE_SPEED + rightVelRef.current) * dt * damp;
 
-        // Floored modulo: keeps positions in [0, period) for either direction,
-        // so there is no start and no end to snap back to.
         leftPosRef.current = ((leftPosRef.current % period) + period) % period;
         rightPosRef.current = ((rightPosRef.current % period) + period) % period;
 
         render();
       }
 
-      // Frame-rate independent momentum decay
       const decay = Math.pow(0.93, dt);
       leftVelRef.current *= decay;
       rightVelRef.current *= decay;
@@ -294,7 +295,6 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
 
     gsap.ticker.add(tick);
 
-    // Card height changes at breakpoints, so the period has to be re-measured
     const handleResize = () => {
       measurePeriod();
       render();
@@ -332,6 +332,21 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
 
 
 
+  // Animate Hero Image & Glassmorphic Sidebar in whenever a project is selected
+  useGSAP(() => {
+    if (selectedProject && heroCardRef.current && sidebarRef.current) {
+      gsap.fromTo(heroCardRef.current,
+        { scale: 0.85, opacity: 0 },
+        { scale: 1, opacity: 1, duration: 0.8, ease: "power3.out", delay: 0.1 }
+      );
+
+      gsap.fromTo(sidebarRef.current,
+        { x: "100%", opacity: 0 },
+        { x: "0%", opacity: 1, duration: 0.8, ease: "power3.out", delay: 0.1 }
+      );
+    }
+  }, { scope: overlayRef, dependencies: [selectedProject] });
+
   // Handle Card Click (Push-Aside Transition to Detail View)
   const handleCardClick = (project: DetailedProject) => {
     setSelectedProject(project);
@@ -354,19 +369,6 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
         duration: 0.8,
         ease: "power3.inOut"
       });
-    }
-
-    // Animate Hero Image & Glassmorphic Sidebar in
-    if (heroCardRef.current && sidebarRef.current) {
-      gsap.fromTo(heroCardRef.current,
-        { scale: 0.85, opacity: 0 },
-        { scale: 1, opacity: 1, duration: 0.8, ease: "power3.out", delay: 0.2 }
-      );
-
-      gsap.fromTo(sidebarRef.current,
-        { x: "100%", opacity: 0 },
-        { x: "0%", opacity: 1, duration: 0.8, ease: "power3.out", delay: 0.2 }
-      );
     }
   };
 
@@ -418,6 +420,7 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
 
   return (
     <div className={`${styles.overlay} ${isOpen ? styles.active : ''}`} ref={overlayRef}>
+      <ShimmeringBeamsBackground active={isOpen} />
       
       {/* Header Navigation */}
       <header className={styles.header}>
