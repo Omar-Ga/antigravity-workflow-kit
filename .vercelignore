@@ -18,14 +18,10 @@ docs
 mcp-playwright
 scratch
 bridge
-images
 dist
 *.py
-*.html
 *.tsbuildinfo
 screenshot-*.jpg
-*.mp4
-*.webm
 
 # Development & environment
 .env*.local
