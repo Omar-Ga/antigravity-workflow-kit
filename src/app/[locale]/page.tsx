@@ -294,7 +294,7 @@ export default function Home() {
         {isLoaded && <ServicesSection />}
 
         {/* Story / About Section */}
-        {isLoaded && <StorySection />}
+        {isLoaded && <StorySection isLoaded={isLoaded} />}
 
         {/* Projects Section */}
         {isLoaded && <ProjectsSection />}

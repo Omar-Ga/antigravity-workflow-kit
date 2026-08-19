@@ -9,7 +9,11 @@ import styles from '@/app/page.module.css';
 
 gsap.registerPlugin(useGSAP, ScrollTrigger);
 
-export default function StorySection() {
+interface StorySectionProps {
+  isLoaded?: boolean;
+}
+
+export default function StorySection({ isLoaded = false }: StorySectionProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [shouldLoadVideo, setShouldLoadVideo] = useState(false);
@@ -18,6 +22,17 @@ export default function StorySection() {
 
   const headlineLines = t.raw('headlineLines') as string[];
   const paragraphs = t.raw('paragraphs') as string[];
+
+  // Idle Preload: Kick off background video fetching 2.5s after site boot
+  useEffect(() => {
+    if (!isLoaded || shouldLoadVideo) return;
+
+    const timer = setTimeout(() => {
+      setShouldLoadVideo(true);
+    }, 2500);
+
+    return () => clearTimeout(timer);
+  }, [isLoaded, shouldLoadVideo]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -97,8 +112,10 @@ export default function StorySection() {
         loop 
         muted 
         playsInline
+        poster="/story_bg_poster.webp"
+        preload="auto"
         style={{ opacity: isVideoLoaded ? 1 : 0 }}
-        onLoadedData={() => {
+        onCanPlayThrough={() => {
           setIsVideoLoaded(true);
           if (videoRef.current) {
             videoRef.current.play().catch(() => {});
