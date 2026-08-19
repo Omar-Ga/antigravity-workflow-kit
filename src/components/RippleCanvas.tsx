@@ -289,17 +289,28 @@ export default function RippleCanvas({ images, activeIndex, className }: Props) 
       };
       stateRef.current = s;
 
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
       const tick = () => {
         if (!s.alive) return;
         if (isIntersecting) {
-          if (s.mouseOn) addDrop(s, s.mouseU, s.mouseV, DROP_R, DROP_STR);
-          simStep(s);
-          uploadRipple(s);
+          if (!prefersReducedMotion) {
+            if (s.mouseOn) addDrop(s, s.mouseU, s.mouseV, DROP_R, DROP_STR);
+            simStep(s);
+            uploadRipple(s);
+          }
           render(s, canvas);
         }
-        s.raf = requestAnimationFrame(tick);
+        if (!prefersReducedMotion) {
+          s.raf = requestAnimationFrame(tick);
+        }
       };
-      s.raf = requestAnimationFrame(tick);
+
+      if (prefersReducedMotion) {
+        render(s, canvas);
+      } else {
+        s.raf = requestAnimationFrame(tick);
+      }
     };
 
     init();
@@ -339,17 +350,24 @@ export default function RippleCanvas({ images, activeIndex, className }: Props) 
   /* ---- image transition (GSAP crossfade + splash) ---- */
   useEffect(() => {
     const s = stateRef.current;
-    if (!s) return;
+    const canvas = canvasRef.current;
+    if (!s || !canvas) return;
     if (activeIndex === s.curImg) return;
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     s.prevImg     = s.curImg;
     s.curImg      = activeIndex;
     s.blend.value = 0;
 
-    // Big splash drop at center on image transition
-    addDrop(s, 0.5, 0.5, 0.08, 0.5);
-
-    gsap.to(s.blend, { value: 1, duration: 0.8, ease: 'power2.out' });
+    if (prefersReducedMotion) {
+      s.blend.value = 1;
+      render(s, canvas);
+    } else {
+      // Big splash drop at center on image transition
+      addDrop(s, 0.5, 0.5, 0.08, 0.5);
+      gsap.to(s.blend, { value: 1, duration: 0.8, ease: 'power2.out' });
+    }
   }, [activeIndex]);
 
   /* ---- pointer / touch / mouse handlers ---- */

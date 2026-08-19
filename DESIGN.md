@@ -37,7 +37,7 @@ Light-dominant. Pure white canvas; dark mode reserved for specific pages where t
 
 ## Typography
 
-**Typefaces:** Playfair Display (serif) + Outfit (sans-serif). Loaded via Google Fonts.
+**Typefaces:** Outfit (sans-serif / display) + Readex Pro (Arabic). Loaded via Google Fonts.
 
 **Scale:**
 

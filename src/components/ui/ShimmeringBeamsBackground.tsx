@@ -146,6 +146,8 @@ export function ShimmeringBeamsBackground({
       ctx.restore();
     };
 
+    const prefersReducedMotion = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
     const animate = () => {
       if (!canvas || !ctx) return;
 
@@ -162,16 +164,20 @@ export function ShimmeringBeamsBackground({
 
       // Draw active shimmering orangeish-white light beams
       beamsRef.current.forEach((beam) => {
-        beam.y -= beam.speed * (beam.layer / LAYERS + 0.5);
-        beam.pulse += beam.pulseSpeed;
-        if (beam.y + beam.length < -50) {
-          beam.y = height + 50;
-          beam.x = Math.random() * width;
+        if (!prefersReducedMotion) {
+          beam.y -= beam.speed * (beam.layer / LAYERS + 0.5);
+          beam.pulse += beam.pulseSpeed;
+          if (beam.y + beam.length < -50) {
+            beam.y = height + 50;
+            beam.x = Math.random() * width;
+          }
         }
         drawBeam(beam);
       });
 
-      animationFrameRef.current = requestAnimationFrame(animate);
+      if (!prefersReducedMotion) {
+        animationFrameRef.current = requestAnimationFrame(animate);
+      }
     };
 
     animate();

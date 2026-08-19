@@ -1,0 +1,16 @@
+{
+  "roleYou": "أنت",
+  "roleAi": "مساعد عمر",
+  "status": {
+    "idle": "المساعد الصوتي جاهز",
+    "connecting": "جارٍ الاتصال بـ Gemini...",
+    "listening": "أستمع إليك (تحدّث الآن)",
+    "processing": "Gemini يفكّر...",
+    "speaking": "المساعد يتحدّث",
+    "error": "خطأ في الاتصال"
+  },
+  "talkNow": "تحدّث الآن",
+  "endCall": "إنهاء المكالمة",
+  "textPlaceholder": "أو اكتب رسالتك...",
+  "send": "إرسال"
+}

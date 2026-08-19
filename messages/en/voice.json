@@ -1,0 +1,16 @@
+{
+  "roleYou": "YOU",
+  "roleAi": "OMAR AI",
+  "status": {
+    "idle": "AI Voice Ready",
+    "connecting": "Connecting to Gemini...",
+    "listening": "Listening (Speak Now)",
+    "processing": "Gemini Thinking...",
+    "speaking": "AI Responding",
+    "error": "Connection Error"
+  },
+  "talkNow": "Talk Now",
+  "endCall": "End Call",
+  "textPlaceholder": "Or type your message...",
+  "send": "Send"
+}

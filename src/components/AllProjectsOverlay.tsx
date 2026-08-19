@@ -1,155 +1,49 @@
 "use client";
 
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { useLenis } from 'lenis/react';
+import { useTranslations } from 'next-intl';
 import ShimmeringBeamsBackground from './ui/ShimmeringBeamsBackground';
+import { ARCHIVE_ENTRIES, ARCHIVE_COUNT, ArchiveProjectEntry } from '@/data/archiveProjects';
 import styles from './AllProjectsOverlay.module.css';
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(useGSAP);
 }
 
-export interface DetailedProject {
-  id: string;
-  number: string;
+/** Translated copy for an archive entry — see `messages/<locale>/archive.json`. */
+interface ProjectCopy {
   title: string;
   category: string;
   description: string;
-  image: string;
   keywords: string[];
   features: string[];
+}
+
+export interface DetailedProject extends ArchiveProjectEntry, ProjectCopy {
   liveUrl?: string;
   repoUrl?: string;
 }
-
-export const ALL_PROJECTS: DetailedProject[] = [
-  {
-    id: 'p1',
-    number: '01',
-    title: 'SkyCourt Warehouse Engine',
-    category: 'Enterprise Logistics & Embedded Data',
-    description: 'Offline-first enterprise logistics & inventory management platform powered by Turso LibSQL embedded replicas, real-time hardware barcode telemetry, and desktop deployment via Tauri. Guaranteed zero data loss during network dropouts with automated background sync.',
-    image: '/images/skycourt/skycourt_1.webp',
-    keywords: ['Turso LibSQL', 'Embedded Replicas', 'Barcode Telemetry', 'Tauri Desktop', 'Rust'],
-    features: [
-      'Turso Embedded LibSQL Local Database Sync',
-      'Real-Time Hardware Barcode Telemetry Streaming',
-      'Cross-Platform Desktop Deployment via Tauri & Rust',
-      'Granular Role-Based Security & Compliance Auditing'
-    ],
-    liveUrl: '#',
-    repoUrl: '#'
-  },
-  {
-    id: 'p2',
-    number: '02',
-    title: "Kafa'a AI Talent Platform",
-    category: 'Enterprise AI Recruitment SaaS',
-    description: 'An enterprise AI recruitment SaaS that parses unstructured CV resumes, calculates multi-variable candidate match scores, and orchestrates automated AI candidate interviews. Processes thousands of applicant documents in seconds with deep semantic analysis.',
-    image: '/images/kafaa/kafaa_1.webp',
-    keywords: ['Enterprise AI SaaS', 'CV Resume Parser', 'Match Score Engine', 'Automated Interviews'],
-    features: [
-      'Unstructured PDF Resume Extraction & OCR Engine',
-      'Multi-Variable Skill Fit & Candidate Scoring',
-      'Real-Time Autonomous Voice AI Recruiter',
-      'Centralized Recruitment Pipeline Dashboard'
-    ],
-    liveUrl: '#',
-    repoUrl: '#'
-  },
-  {
-    id: 'p3',
-    number: '03',
-    title: 'O2Mation Flagship Web',
-    category: 'Bespoke Digital Flagship',
-    description: 'Bespoke, agency-grade digital flagship built for enterprise scale. Features custom WebGL displacement shaders, fluid GSAP scroll choreography, and a dynamic dark-mode glassmorphism visual language.',
-    image: '/images/o2mation/o2mation_1.webp',
-    keywords: ['Fluid GSAP Motion', 'WebGL Shaders', 'Next.js App Router', 'Luxury Design System'],
-    features: [
-      'Custom WebGL Displacement & Liquid Shaders',
-      '60FPS GSAP ScrollTrigger Motion Choreography',
-      'Tailor-Made Typography & Color Palette Tokens',
-      'Sub-Second Global Edge Delivery Performance'
-    ],
-    liveUrl: '#',
-    repoUrl: '#'
-  },
-  {
-    id: 'p4',
-    number: '04',
-    title: 'Voice AI & Autonomous Agents',
-    category: 'Real-Time Voice Telephony',
-    description: 'Ultra-low-latency real-time voice AI assistant integrated directly into web interfaces and phone trunks. Capable of instant speech-to-speech interaction, dynamic function calling, and autonomous appointment booking.',
-    image: '/images/services/strategy.webp',
-    keywords: ['Real-Time WebRTC', 'Voice AI Assistant', 'SIP Telephony', 'Autonomous Agents'],
-    features: [
-      'Sub-400ms WebRTC Real-Time Audio Streaming',
-      'SIP Trunking for Automated 24/7 Phone Reception',
-      'Autonomous Database & API Function Calling',
-      'Dual Knowledge Vault for Public & Internal SOPs'
-    ],
-    liveUrl: '#',
-    repoUrl: '#'
-  },
-  {
-    id: 'p5',
-    number: '05',
-    title: 'OmniFlow Node Engine',
-    category: 'Process Automation & Node Graphs',
-    description: 'Visual node-based process automation engine allowing non-technical managers to construct complex AI decision trees, document processing pipelines, and multi-app database sync routines with zero code.',
-    image: '/images/services/systems/systems_3.webp',
-    keywords: ['Node Graph Canvas', 'Workflow Engine', 'AI Pipelines', 'Async Events'],
-    features: [
-      'Interactive Canvas Node Graph Visualizer',
-      'Automated Unstructured Document to DB Extraction',
-      'Granular API & Event-Driven Trigger Webhooks',
-      'Distributed Async Worker Queue Execution'
-    ],
-    liveUrl: '#',
-    repoUrl: '#'
-  },
-  {
-    id: 'p6',
-    number: '06',
-    title: 'HyperPulse Telemetry Suite',
-    category: 'Distributed Systems & Metrics',
-    description: 'High-throughput real-time infrastructure telemetry suite that captures millions of edge events per second, visualizes system health via custom Canvas graphics, and alerts on anomalous traffic spikes.',
-    image: '/images/services/systems/systems_1.webp',
-    keywords: ['Distributed Telemetry', 'WebSocket Stream', 'High Throughput', 'Canvas Visualizer'],
-    features: [
-      'High-Throughput Real-Time WebSocket Telemetry',
-      'Anomalous Traffic Spike Detection Engine',
-      'Low-Overhead Micro-Frontend Telemetry SDK',
-      'Custom 60FPS HTML5 Canvas Metrics Visualizer'
-    ],
-    liveUrl: '#',
-    repoUrl: '#'
-  }
-];
 
 interface AllProjectsOverlayProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-/** Unique cards per column before the sequence repeats. */
-const UNIQUE_PER_COL = 3;
-/** How many times the unique set is duplicated in the DOM. The track must stay
- *  taller than the container even when shifted a full period, so: 4 x (3 cards)
- *  = 6288px of track vs a 1584px period — safe past 4K-tall displays. Only 6
- *  unique image URLs are involved, so the extra copies cost nothing to fetch. */
-const TRACK_REPEATS = 4;
+/** 9 Unique cards per column (18 total projects across 2 tracks). */
+const UNIQUE_PER_COL = 9;
+/** Duplications per track to ensure seamless infinite looping past 4K displays. */
+const TRACK_REPEATS = 3;
 /** Idle drift in px per frame at 60fps. */
-const BASE_SPEED = 3;
-/** Ceiling on wheel-injected velocity (px/frame) so fast flicks stay readable. */
-const MAX_VELOCITY = 90;
+const BASE_SPEED = 2.4;
+/** Ceiling on wheel-injected velocity (px/frame). */
+const MAX_VELOCITY = 80;
 
 export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverlayProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
-  // Viewport wrappers own the push-aside transform; inner tracks own the drift
-  // transform. Separating them means the two never fight over `transform`.
   const viewportLeftRef = useRef<HTMLDivElement>(null);
   const viewportRightRef = useRef<HTMLDivElement>(null);
   const colLeftRef = useRef<HTMLDivElement>(null);
@@ -157,11 +51,20 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
   const heroCardRef = useRef<HTMLDivElement>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const lenis = useLenis();
+  const t = useTranslations('archive');
+
+  // Merge the static asset/id data with the active locale's copy.
+  const allProjects: DetailedProject[] = ARCHIVE_ENTRIES.map((entry) => ({
+    ...entry,
+    ...(t.raw(`items.${entry.id}`) as ProjectCopy),
+    liveUrl: '#',
+    repoUrl: '#'
+  }));
 
   const [selectedProject, setSelectedProject] = useState<DetailedProject | null>(null);
+  const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
 
-  // Infinite drift engine state. Positions are kept normalised to [0, period)
-  // so they can advance forever without ever reaching a boundary.
+  // Infinite drift engine state.
   const leftPosRef = useRef(0);
   const rightPosRef = useRef(0);
   const leftVelRef = useRef(0);
@@ -171,12 +74,12 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
   const hoverTargetRef = useRef(1);
   const hoverFactorRef = useRef(1);
 
-  // Split projects into 2 columns, each duplicated TRACK_REPEATS times
+  // Split 18 projects into 2 columns of 9, duplicated TRACK_REPEATS times
   const leftColumnProjects = Array.from({ length: TRACK_REPEATS }, () =>
-    ALL_PROJECTS.slice(0, UNIQUE_PER_COL)
+    allProjects.slice(0, UNIQUE_PER_COL)
   ).flat();
   const rightColumnProjects = Array.from({ length: TRACK_REPEATS }, () =>
-    ALL_PROJECTS.slice(UNIQUE_PER_COL, UNIQUE_PER_COL * 2)
+    allProjects.slice(UNIQUE_PER_COL, UNIQUE_PER_COL * 2)
   ).flat();
 
   // Lock Lenis scroll when overlay is open
@@ -191,38 +94,73 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
   useGSAP(() => {
     if (!overlayRef.current) return;
 
-    if (isOpen) {
-      // Clear any lingering push-aside offset from a previous detail view
-      if (viewportLeftRef.current && viewportRightRef.current) {
-        gsap.set([viewportLeftRef.current, viewportRightRef.current], {
-          xPercent: 0,
-          opacity: 1
+    const mm = gsap.matchMedia();
+
+    mm.add("(prefers-reduced-motion: no-preference)", () => {
+      if (isOpen) {
+        if (viewportLeftRef.current && viewportRightRef.current) {
+          gsap.set([viewportLeftRef.current, viewportRightRef.current], {
+            xPercent: 0,
+            opacity: 1
+          });
+        }
+
+        gsap.to(overlayRef.current, {
+          autoAlpha: 1,
+          duration: 0.6,
+          ease: "power2.out"
+        });
+      } else {
+        gsap.to(overlayRef.current, {
+          autoAlpha: 0,
+          duration: 0.5,
+          ease: "power2.in",
+          onComplete: () => {
+            setSelectedProject(null);
+            setActiveImageIndex(0);
+          }
         });
       }
+    });
 
-      gsap.to(overlayRef.current, {
-        autoAlpha: 1,
-        duration: 0.6,
-        ease: "power2.out"
-      });
-    } else {
-      gsap.to(overlayRef.current, {
-        autoAlpha: 0,
-        duration: 0.5,
-        ease: "power2.in",
-        onComplete: () => setSelectedProject(null)
-      });
-    }
+    mm.add("(prefers-reduced-motion: reduce)", () => {
+      if (isOpen) {
+        if (viewportLeftRef.current && viewportRightRef.current) {
+          gsap.set([viewportLeftRef.current, viewportRightRef.current], {
+            xPercent: 0,
+            opacity: 1
+          });
+        }
+
+        gsap.to(overlayRef.current, {
+          autoAlpha: 1,
+          duration: 0.15,
+          ease: "none"
+        });
+      } else {
+        gsap.to(overlayRef.current, {
+          autoAlpha: 0,
+          duration: 0.15,
+          ease: "none",
+          onComplete: () => {
+            setSelectedProject(null);
+            setActiveImageIndex(0);
+          }
+        });
+      }
+    });
   }, { scope: overlayRef, dependencies: [isOpen] });
 
-  // Ticker-driven seamless infinite drift.
-  //
-  // The loop period is measured from real card offsets rather than assumed to be
-  // half the track height — with flex `gap`, scrollHeight/2 is short by half a
-  // gap, and that mismatch is the visible snap. offsetTop of card[UNIQUE_PER_COL]
-  // minus card[0] is the exact repeat distance, gaps included.
+  // Ticker-driven seamless infinite drift
   useEffect(() => {
     if (!isOpen) return;
+
+    const prefersReducedMotion = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReducedMotion) {
+      if (colLeftRef.current) colLeftRef.current.style.transform = "none";
+      if (colRightRef.current) colRightRef.current.style.transform = "none";
+      return;
+    }
 
     const measurePeriod = (): boolean => {
       const track = colLeftRef.current;
@@ -239,21 +177,19 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
     };
 
     const render = () => {
-      const period = periodRef.current || 1584;
+      const period = periodRef.current || 4700;
       if (colLeftRef.current) {
-        colLeftRef.current.style.transform =
-          `translate3d(0, ${-leftPosRef.current}px, 0)`;
+        colLeftRef.current.style.transform = `translate3d(0, ${-leftPosRef.current}px, 0)`;
       }
       if (colRightRef.current) {
-        colRightRef.current.style.transform =
-          `translate3d(0, ${rightPosRef.current - period}px, 0)`;
+        colRightRef.current.style.transform = `translate3d(0, ${rightPosRef.current - period}px, 0)`;
       }
     };
 
-    // Reset engine state on open
+    // Initialize drift state
     const hasMeasured = measurePeriod();
     if (!hasMeasured) {
-      periodRef.current = 1584; // Safe fallback period until DOM layout resolves
+      periodRef.current = 4700;
     }
 
     leftPosRef.current = 0;
@@ -266,10 +202,9 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
     render();
 
     const tick = (_time: number, deltaTime: number) => {
-      // Re-measure period if not accurately calculated yet
       measurePeriod();
 
-      const period = periodRef.current || 1584;
+      const period = periodRef.current || 4700;
       const dt = Math.min(deltaTime / 16.667, 3);
 
       hoverFactorRef.current +=
@@ -311,38 +246,31 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
   useEffect(() => {
     if (!isOpen || selectedProject) return;
 
-    const handleWheel = (e: WheelEvent) => {
-      // Prevent default window scroll while navigating the archive
-      e.preventDefault();
+    const prefersReducedMotion = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReducedMotion) return;
 
-      // A positive impulse accelerates each track along its own natural
-      // direction; a negative one drives both in reverse.
-      const impulse = e.deltaY * 0.14;
-      leftVelRef.current = gsap.utils.clamp(
-        -MAX_VELOCITY, MAX_VELOCITY, leftVelRef.current + impulse
-      );
-      rightVelRef.current = gsap.utils.clamp(
-        -MAX_VELOCITY, MAX_VELOCITY, rightVelRef.current + impulse
-      );
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const impulse = e.deltaY * 0.12;
+      leftVelRef.current = gsap.utils.clamp(-MAX_VELOCITY, MAX_VELOCITY, leftVelRef.current + impulse);
+      rightVelRef.current = gsap.utils.clamp(-MAX_VELOCITY, MAX_VELOCITY, rightVelRef.current + impulse);
     };
 
     window.addEventListener('wheel', handleWheel, { passive: false });
     return () => window.removeEventListener('wheel', handleWheel);
   }, [isOpen, selectedProject]);
 
-
-
   // Animate Hero Image & Glassmorphic Sidebar in whenever a project is selected
   useGSAP(() => {
     if (selectedProject && heroCardRef.current && sidebarRef.current) {
       gsap.fromTo(heroCardRef.current,
-        { scale: 0.85, opacity: 0 },
-        { scale: 1, opacity: 1, duration: 0.8, ease: "power3.out", delay: 0.1 }
+        { scale: 0.88, opacity: 0 },
+        { scale: 1, opacity: 1, duration: 0.7, ease: "power3.out", delay: 0.05 }
       );
 
       gsap.fromTo(sidebarRef.current,
         { x: "100%", opacity: 0 },
-        { x: "0%", opacity: 1, duration: 0.8, ease: "power3.out", delay: 0.1 }
+        { x: "0%", opacity: 1, duration: 0.7, ease: "power3.out", delay: 0.05 }
       );
     }
   }, { scope: overlayRef, dependencies: [selectedProject] });
@@ -350,23 +278,21 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
   // Handle Card Click (Push-Aside Transition to Detail View)
   const handleCardClick = (project: DetailedProject) => {
     setSelectedProject(project);
-
-    // Freeze the drift engine; position is preserved so resuming won't jump
+    setActiveImageIndex(0);
     pausedRef.current = true;
 
-    // Push slanted columns off-screen left and right
     if (viewportLeftRef.current && viewportRightRef.current) {
       gsap.to(viewportLeftRef.current, {
         xPercent: -140,
         opacity: 0,
-        duration: 0.8,
+        duration: 0.75,
         ease: "power3.inOut"
       });
 
       gsap.to(viewportRightRef.current, {
         xPercent: 140,
         opacity: 0,
-        duration: 0.8,
+        duration: 0.75,
         ease: "power3.inOut"
       });
     }
@@ -375,33 +301,31 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
   // Close Detail View (Reverse Push-Aside Transition)
   const handleCloseDetail = () => {
     if (sidebarRef.current && heroCardRef.current) {
-      // Retract sidebar and hero card
       gsap.to(sidebarRef.current, {
         x: "100%",
         opacity: 0,
-        duration: 0.6,
+        duration: 0.5,
         ease: "power2.in"
       });
 
       gsap.to(heroCardRef.current, {
-        scale: 0.85,
+        scale: 0.88,
         opacity: 0,
-        duration: 0.6,
+        duration: 0.5,
         ease: "power2.in"
       });
     }
 
-    // Bring slanted columns back in from left/right
     if (viewportLeftRef.current && viewportRightRef.current) {
       gsap.to([viewportLeftRef.current, viewportRightRef.current], {
         xPercent: 0,
         opacity: 1,
-        duration: 0.8,
+        duration: 0.75,
         ease: "power3.out",
-        delay: 0.3,
+        delay: 0.2,
         onComplete: () => {
           setSelectedProject(null);
-          // Resume the drift engine
+          setActiveImageIndex(0);
           hoverTargetRef.current = 1;
           pausedRef.current = false;
         }
@@ -409,7 +333,7 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
     }
   };
 
-  // Card Hover Speed Control (eased by the ticker, not applied instantly)
+  // Card Hover Speed Control
   const handleMouseEnter = () => {
     if (!selectedProject) hoverTargetRef.current = 0.15;
   };
@@ -418,6 +342,71 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
     if (!selectedProject) hoverTargetRef.current = 1;
   };
 
+  // Gallery Navigation Handlers
+  const handlePrevImage = useCallback(() => {
+    if (!selectedProject) return;
+    setActiveImageIndex((prev) => (prev > 0 ? prev - 1 : selectedProject.gallery.length - 1));
+  }, [selectedProject]);
+
+  const handleNextImage = useCallback(() => {
+    if (!selectedProject) return;
+    setActiveImageIndex((prev) => (prev < selectedProject.gallery.length - 1 ? prev + 1 : 0));
+  }, [selectedProject]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (selectedProject) handleCloseDetail();
+        else onClose();
+      } else if (selectedProject) {
+        if (e.key === 'ArrowLeft') handlePrevImage();
+        else if (e.key === 'ArrowRight') handleNextImage();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, selectedProject, handlePrevImage, handleNextImage, onClose]);
+
+  /** Shared card markup for both slanted columns. */
+  const renderCard = (p: DetailedProject, key: string) => (
+    <div
+      key={key}
+      className={styles.card}
+      onClick={() => handleCardClick(p)}
+      role="button"
+      tabIndex={0}
+      aria-label={`Open ${p.title}`}
+    >
+      <Image
+        src={p.image}
+        alt={p.title}
+        fill
+        sizes="(max-width: 768px) 280px, (max-width: 1024px) 340px, 440px"
+        className={styles.cardImage}
+        priority={p.id === 'p1' || p.id === 'p10'}
+      />
+      <div className={styles.cardOverlay}>
+        <span className={styles.cardCategory} dir="auto">
+          <span className="i18n-ltr">{p.number}</span> — {p.category}
+        </span>
+        <h3 className={styles.cardTitle}>{p.title}</h3>
+        <div className={styles.cardKeywords}>
+          {p.keywords.slice(0, 3).map((kw, i) => (
+            <span key={i} className={styles.keywordBadge} dir="auto">{kw}</span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  const activeImageSrc = selectedProject
+    ? (selectedProject.gallery[activeImageIndex] || selectedProject.image)
+    : '';
+
   return (
     <div className={`${styles.overlay} ${isOpen ? styles.active : ''}`} ref={overlayRef}>
       <ShimmeringBeamsBackground active={isOpen} />
@@ -425,16 +414,17 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
       {/* Header Navigation */}
       <header className={styles.header}>
         <div className={styles.brandBlock}>
-          <span className={styles.brandTag}>PROJECT ARCHIVE</span>
-          <h2 className={styles.brandTitle}>ALL WORK // Showcase</h2>
-          <span className={styles.badge}>{ALL_PROJECTS.length} FEATURED PLATFORMS</span>
+          <span className={styles.brandTag} dir="auto">{t('brandTag')}</span>
+          <h2 className={styles.brandTitle}>{t('brandTitle')}</h2>
+          <span className={styles.badge} dir="auto">{t('badge', { count: ARCHIVE_COUNT })}</span>
         </div>
         <button 
           className={styles.closeBtn}
           onClick={onClose}
-          aria-label="Close Archive Overlay"
+          aria-label={t('closeLabel')}
+          dir="auto"
         >
-          ✕ Close
+          ✕ {t('close')}
         </button>
       </header>
 
@@ -452,24 +442,7 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
             onMouseLeave={handleMouseLeave}
           >
             <div className={styles.columnTrack} ref={colLeftRef}>
-              {leftColumnProjects.map((p, idx) => (
-                <div
-                  key={`left-${p.id}-${idx}`}
-                  className={styles.card}
-                  onClick={() => handleCardClick(p)}
-                >
-                  <img src={p.image} alt={p.title} className={styles.cardImage} />
-                  <div className={styles.cardOverlay}>
-                    <span className={styles.cardCategory}>{p.number} — {p.category}</span>
-                    <h3 className={styles.cardTitle}>{p.title}</h3>
-                    <div className={styles.cardKeywords}>
-                      {p.keywords.slice(0, 3).map((kw, i) => (
-                        <span key={i} className={styles.keywordBadge}>{kw}</span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ))}
+              {leftColumnProjects.map((p, idx) => renderCard(p, `left-${p.id}-${idx}`))}
             </div>
           </div>
 
@@ -481,24 +454,7 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
             onMouseLeave={handleMouseLeave}
           >
             <div className={styles.columnTrack} ref={colRightRef}>
-              {rightColumnProjects.map((p, idx) => (
-                <div
-                  key={`right-${p.id}-${idx}`}
-                  className={styles.card}
-                  onClick={() => handleCardClick(p)}
-                >
-                  <img src={p.image} alt={p.title} className={styles.cardImage} />
-                  <div className={styles.cardOverlay}>
-                    <span className={styles.cardCategory}>{p.number} — {p.category}</span>
-                    <h3 className={styles.cardTitle}>{p.title}</h3>
-                    <div className={styles.cardKeywords}>
-                      {p.keywords.slice(0, 3).map((kw, i) => (
-                        <span key={i} className={styles.keywordBadge}>{kw}</span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ))}
+              {rightColumnProjects.map((p, idx) => renderCard(p, `right-${p.id}-${idx}`))}
             </div>
           </div>
 
@@ -511,8 +467,49 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
           <div className={styles.detailHeroArea}>
             {selectedProject && (
               <div className={styles.detailHeroCard} ref={heroCardRef}>
-                <img src={selectedProject.image} alt={selectedProject.title} className={styles.detailHeroImg} />
-                <span className={styles.detailHeroBadge}>{selectedProject.number} // {selectedProject.category}</span>
+                <Image
+                  src={activeImageSrc}
+                  alt={selectedProject.title}
+                  fill
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 70vw, 960px"
+                  className={styles.detailHeroImg}
+                  priority
+                />
+                
+                <span className={styles.detailHeroBadge} dir="auto">
+                  <span className="i18n-ltr">{selectedProject.number}</span>
+                  {' // '}
+                  {selectedProject.category}
+                </span>
+
+                <span className={styles.heroCounterBadge} dir="auto">
+                  <span className="i18n-ltr">{activeImageIndex + 1} / {selectedProject.gallery.length}</span>
+                </span>
+
+                {selectedProject.gallery.length > 1 && (
+                  <>
+                    <button
+                      className={styles.heroNavPrev}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handlePrevImage();
+                      }}
+                      aria-label="Previous image"
+                    >
+                      ‹
+                    </button>
+                    <button
+                      className={styles.heroNavNext}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleNextImage();
+                      }}
+                      aria-label="Next image"
+                    >
+                      ›
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -524,14 +521,44 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
                 <button 
                   className={styles.sidebarCloseBtn}
                   onClick={handleCloseDetail}
+                  dir="auto"
                 >
-                  ✕ Close View
+                  ✕ {t('closeView')}
                 </button>
-                <span className={styles.sidebarIndex}>{selectedProject.number} // FEATURED ARCHITECTURE</span>
+                <span className={styles.sidebarIndex} dir="auto">
+                  <span className="i18n-ltr">{selectedProject.number}</span>
+                  {' // '}
+                  {t('featuredArchitecture')}
+                </span>
                 <h2 className={styles.sidebarTitle}>{selectedProject.title}</h2>
                 <p className={styles.sidebarDescription}>{selectedProject.description}</p>
 
-                <h4 className={styles.sectionHeader}>Key Engineering Specs</h4>
+                {/* Multi-Screenshot Gallery Selector */}
+                {selectedProject.gallery.length > 1 && (
+                  <div className={styles.gallerySection}>
+                    <h4 className={styles.sectionHeader}>{t('galleryTitle')}</h4>
+                    <div className={styles.galleryGrid}>
+                      {selectedProject.gallery.map((thumbSrc, idx) => (
+                        <button
+                          key={idx}
+                          className={`${styles.galleryThumb} ${idx === activeImageIndex ? styles.active : ''}`}
+                          onClick={() => setActiveImageIndex(idx)}
+                          aria-label={`View screenshot ${idx + 1}`}
+                        >
+                          <Image
+                            src={thumbSrc}
+                            alt={`${selectedProject.title} view ${idx + 1}`}
+                            fill
+                            sizes="72px"
+                            className={styles.galleryThumbImg}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <h4 className={styles.sectionHeader}>{t('keySpecs')}</h4>
                 <ul className={styles.featureList}>
                   {selectedProject.features.map((feat, i) => (
                     <li key={i} className={styles.featureItem}>
@@ -541,10 +568,10 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
                   ))}
                 </ul>
 
-                <h4 className={styles.sectionHeader}>Technology Stack</h4>
+                <h4 className={styles.sectionHeader}>{t('techStack')}</h4>
                 <div className={styles.techList}>
                   {selectedProject.keywords.map((kw, i) => (
-                    <span key={i} className={styles.techTag}>{kw}</span>
+                    <span key={i} className={styles.techTag} dir="auto">{kw}</span>
                   ))}
                 </div>
 
@@ -556,14 +583,16 @@ export default function AllProjectsOverlay({ isOpen, onClose }: AllProjectsOverl
                       window.dispatchEvent(event);
                       onClose();
                     }}
+                    dir="auto"
                   >
-                    Discuss Platform ↗
+                    {t('discuss')}
                   </button>
                   <button 
                     className={styles.secondaryActionBtn}
                     onClick={handleCloseDetail}
+                    dir="auto"
                   >
-                    Back to Grid
+                    {t('backToGrid')}
                   </button>
                 </div>
               </>

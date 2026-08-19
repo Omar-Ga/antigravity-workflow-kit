@@ -4,89 +4,66 @@ import { useRef } from "react";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { useLenis } from "lenis/react";
+import { useTranslations } from "next-intl";
+import { NAV_ITEMS } from "@/lib/navItems";
+import { useNavScroll } from "@/hooks/useNavScroll";
+import LanguageSwitcher from "./LanguageSwitcher";
 import styles from "./GlobalNav.module.css";
 
 gsap.registerPlugin(ScrollTrigger);
 
 export default function GlobalNav() {
   const navRef = useRef<HTMLElement>(null);
-  const lenis = useLenis();
+  const t = useTranslations("nav");
+  const handleNavClick = useNavScroll(1.5);
 
   useGSAP(() => {
-    // Start nav hidden and slightly translated up
-    gsap.set(navRef.current, { yPercent: -100, autoAlpha: 0 });
+    const mm = gsap.matchMedia();
 
-    // Animate it down when the projects section hits the top of the viewport
-    gsap.to(navRef.current, {
-      yPercent: 0,
-      autoAlpha: 1,
-      duration: 0.6,
-      ease: "power3.out",
-      scrollTrigger: {
-        trigger: "#services",
-        start: "top top",
-        toggleActions: "play none none reverse"
-      }
+    mm.add("(prefers-reduced-motion: no-preference)", () => {
+      gsap.set(navRef.current, { yPercent: -100, autoAlpha: 0 });
+
+      gsap.to(navRef.current, {
+        yPercent: 0,
+        autoAlpha: 1,
+        duration: 0.6,
+        ease: "power3.out",
+        scrollTrigger: {
+          trigger: "#services",
+          start: "top top",
+          toggleActions: "play none none reverse"
+        }
+      });
+    });
+
+    mm.add("(prefers-reduced-motion: reduce)", () => {
+      gsap.set(navRef.current, { yPercent: 0, autoAlpha: 0 });
+
+      gsap.to(navRef.current, {
+        autoAlpha: 1,
+        duration: 0.2,
+        ease: "none",
+        scrollTrigger: {
+          trigger: "#services",
+          start: "top top",
+          toggleActions: "play none none reverse"
+        }
+      });
     });
   });
 
   return (
     <nav className={`${styles.topNav} gsap-global-nav`} ref={navRef}>
-      {[
-        { name: "HOME", target: ".gsap-main-hero" },
-        { name: "SERVICES", target: "#services" },
-        { name: "ABOUT", target: "#about" },
-        { name: "PROJECTS", target: "#projects" },
-        { name: "CONTACT", target: "#contact" },
-      ].map((item) => (
+      {NAV_ITEMS.map((item) => (
         <div
-          key={item.name}
+          key={item.key}
           className={styles.topNavItem}
-          onClick={() => {
-            if (item.name === "CONTACT") {
-              window.dispatchEvent(new Event("open-contact"));
-            } else if (lenis) {
-              if (item.name === "ABOUT") {
-                const st = ScrollTrigger.getById("showcase-st");
-                if (st && st.animation) {
-                  const progress = (st.animation as gsap.core.Timeline).labels["aboutPanel"] / st.animation.duration();
-                  const scrollPos = st.start + (st.end - st.start) * progress;
-                  lenis.scrollTo(scrollPos, { duration: 1.5 });
-                }
-              } else if (item.target === ".gsap-main-hero") {
-                lenis.scrollTo(0, { duration: 1.5 });
-              } else {
-                const targetEl = document.querySelector(item.target) as HTMLElement;
-                if (targetEl) {
-                  lenis.scrollTo(targetEl, { duration: 1.5 });
-                }
-              }
-            } else {
-              if (item.name === "ABOUT") {
-                const st = ScrollTrigger.getById("showcase-st");
-                if (st && st.animation) {
-                  const progress = (st.animation as gsap.core.Timeline).labels["aboutPanel"] / st.animation.duration();
-                  const scrollPos = st.start + (st.end - st.start) * progress;
-                  window.scrollTo({ top: scrollPos, behavior: "smooth" });
-                } else {
-                  const aboutEl = document.querySelector("#about") as HTMLElement;
-                  if (aboutEl) aboutEl.scrollIntoView({ behavior: "smooth" });
-                }
-              } else if (item.target === ".gsap-main-hero") {
-                window.scrollTo({ top: 0, behavior: "smooth" });
-              } else {
-                const targetEl = document.querySelector(item.target) as HTMLElement;
-                if (targetEl) {
-                  targetEl.scrollIntoView({ behavior: "smooth" });
-                }
-              }
-            }
-          }}
+          onClick={() => handleNavClick(item)}
         >
-          {item.name}
+          {t(`items.${item.key}`)}
         </div>
       ))}
+      <LanguageSwitcher variant="bar" />
     </nav>
   );
 }

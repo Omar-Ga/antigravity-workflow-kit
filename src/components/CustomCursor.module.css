@@ -11,8 +11,7 @@
   mix-blend-mode: difference;
   visibility: hidden;
   opacity: 0;
+  transition: none !important;
   will-change: transform;
-  backface-visibility: hidden;
-  transform: translateZ(0);
 }
 

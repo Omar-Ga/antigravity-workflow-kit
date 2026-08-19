@@ -10,25 +10,31 @@ gsap.registerPlugin(ScrollTrigger);
 
 export default function LenisProvider({ children }: { children: React.ReactNode }) {
   const lenisRef = useRef<any>(null);
-  const [isMobile, setIsMobile] = useState<boolean>(false);
+  const [isDisabled, setIsDisabled] = useState<boolean>(false);
 
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768);
+    const checkDisabled = () => {
+      const isSmall = window.innerWidth <= 768;
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      setIsDisabled(isSmall || reducedMotion);
     };
-    checkMobile();
+    checkDisabled();
 
-    const mql = window.matchMedia("(max-width: 768px)");
-    const handleChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    mql.addEventListener("change", handleChange);
+    const mqlMobile = window.matchMedia("(max-width: 768px)");
+    const mqlMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+    const handleChange = () => checkDisabled();
+    mqlMobile.addEventListener("change", handleChange);
+    mqlMotion.addEventListener("change", handleChange);
 
     return () => {
-      mql.removeEventListener("change", handleChange);
+      mqlMobile.removeEventListener("change", handleChange);
+      mqlMotion.removeEventListener("change", handleChange);
     };
   }, []);
 
   useEffect(() => {
-    if (isMobile) {
+    if (isDisabled) {
       ScrollTrigger.refresh();
       return;
     }
@@ -53,9 +59,9 @@ export default function LenisProvider({ children }: { children: React.ReactNode 
       }
       gsap.ticker.remove(update);
     };
-  }, [isMobile]);
+  }, [isDisabled]);
 
-  if (isMobile) {
+  if (isDisabled) {
     return <>{children}</>;
   }
 

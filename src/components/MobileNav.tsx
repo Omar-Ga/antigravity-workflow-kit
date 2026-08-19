@@ -5,124 +5,104 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useLenis } from "lenis/react";
+import { useTranslations } from "next-intl";
+import { NAV_ITEMS, type NavItem } from "@/lib/navItems";
+import { useNavScroll } from "@/hooks/useNavScroll";
+import LanguageSwitcher from "./LanguageSwitcher";
 import styles from "./MobileNav.module.css";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(useGSAP, ScrollTrigger);
 }
 
-const NAV_ITEMS = [
-  { name: "HOME", target: ".gsap-main-hero" },
-  { name: "SERVICES", target: "#services" },
-  { name: "ABOUT", target: "#about" },
-  { name: "PROJECTS", target: "#projects" },
-  { name: "CONTACT", target: "#contact" },
-];
-
 export default function MobileNav() {
   const [isOpen, setIsOpen] = useState(false);
   const drawerRef = useRef<HTMLDivElement>(null);
   const navItemsRef = useRef<(HTMLDivElement | null)[]>([]);
   const lenis = useLenis();
+  const t = useTranslations("nav");
+  const navigateTo = useNavScroll(1.2);
 
   // GSAP Drawer open/close animation
   useGSAP(() => {
     if (!drawerRef.current) return;
 
-    if (isOpen) {
-      // Slide up and fade in drawer
-      gsap.to(drawerRef.current, {
-        autoAlpha: 1,
-        duration: 0.4,
-        ease: "power3.out"
-      });
+    const mm = gsap.matchMedia();
 
-      // Stagger animate links in
-      const validItems = navItemsRef.current.filter(Boolean);
-      if (validItems.length > 0) {
-        gsap.fromTo(
-          validItems,
-          { y: 30, opacity: 0 },
-          {
-            y: 0,
-            opacity: 1,
-            duration: 0.5,
-            stagger: 0.08,
-            ease: "power2.out",
-            delay: 0.1
-          }
-        );
-      }
-    } else {
-      const validItems = navItemsRef.current.filter(Boolean);
-      if (validItems.length > 0) {
-        gsap.to(validItems, {
-          y: -15,
-          opacity: 0,
-          duration: 0.25,
-          ease: "power2.in"
+    mm.add("(prefers-reduced-motion: no-preference)", () => {
+      if (isOpen) {
+        // Slide up and fade in drawer
+        gsap.to(drawerRef.current, {
+          autoAlpha: 1,
+          duration: 0.4,
+          ease: "power3.out"
+        });
+
+        // Stagger animate links in
+        const validItems = navItemsRef.current.filter(Boolean);
+        if (validItems.length > 0) {
+          gsap.fromTo(
+            validItems,
+            { y: 30, opacity: 0 },
+            {
+              y: 0,
+              opacity: 1,
+              duration: 0.5,
+              stagger: 0.08,
+              ease: "power2.out",
+              delay: 0.1
+            }
+          );
+        }
+      } else {
+        const validItems = navItemsRef.current.filter(Boolean);
+        if (validItems.length > 0) {
+          gsap.to(validItems, {
+            y: -15,
+            opacity: 0,
+            duration: 0.25,
+            ease: "power2.in"
+          });
+        }
+
+        gsap.to(drawerRef.current, {
+          autoAlpha: 0,
+          duration: 0.35,
+          delay: 0.1,
+          ease: "power3.in"
         });
       }
+    });
 
-      gsap.to(drawerRef.current, {
-        autoAlpha: 0,
-        duration: 0.35,
-        delay: 0.1,
-        ease: "power3.in"
-      });
-    }
+    mm.add("(prefers-reduced-motion: reduce)", () => {
+      const validItems = navItemsRef.current.filter(Boolean);
+      if (isOpen) {
+        gsap.set(validItems, { y: 0, opacity: 1 });
+        gsap.to(drawerRef.current, {
+          autoAlpha: 1,
+          duration: 0.15,
+          ease: "none"
+        });
+      } else {
+        gsap.to(drawerRef.current, {
+          autoAlpha: 0,
+          duration: 0.15,
+          ease: "none"
+        });
+      }
+    });
   }, [isOpen]);
 
-  const handleNavClick = (item: typeof NAV_ITEMS[0]) => {
+  const handleNavClick = (item: NavItem) => {
     setIsOpen(false);
-    if (item.name === "CONTACT") {
-      window.dispatchEvent(new Event("open-contact"));
-    } else if (lenis) {
-      if (item.name === "ABOUT") {
-        const st = ScrollTrigger.getById("showcase-st");
-        if (st && st.animation) {
-          const progress = (st.animation as gsap.core.Timeline).labels["aboutPanel"] / st.animation.duration();
-          const scrollPos = st.start + (st.end - st.start) * progress;
-          lenis.scrollTo(scrollPos, { duration: 1.2 });
-        } else {
-          const aboutEl = document.querySelector("#about") as HTMLElement;
-          if (aboutEl) lenis.scrollTo(aboutEl, { duration: 1.2 });
-        }
-      } else if (item.target === ".gsap-main-hero") {
-        lenis.scrollTo(0, { duration: 1.2 });
-      } else {
-        const targetEl = document.querySelector(item.target) as HTMLElement;
-        if (targetEl) {
-          lenis.scrollTo(targetEl, { duration: 1.2 });
-        }
-      }
-    } else {
-      if (item.name === "ABOUT") {
-        const st = ScrollTrigger.getById("showcase-st");
-        if (st && st.animation) {
-          const progress = (st.animation as gsap.core.Timeline).labels["aboutPanel"] / st.animation.duration();
-          const scrollPos = st.start + (st.end - st.start) * progress;
-          window.scrollTo({ top: scrollPos, behavior: "smooth" });
-        } else {
-          const aboutEl = document.querySelector("#about") as HTMLElement;
-          if (aboutEl) aboutEl.scrollIntoView({ behavior: "smooth" });
-        }
-      } else if (item.target === ".gsap-main-hero") {
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      } else {
-        const targetEl = document.querySelector(item.target) as HTMLElement;
-        if (targetEl) {
-          targetEl.scrollIntoView({ behavior: "smooth" });
-        }
-      }
-    }
+    navigateTo(item);
   };
 
   return (
     <>
       <header className={styles.mobileHeader}>
         <div 
-          className={styles.logo}
+          className={`${styles.logo} i18n-ltr`}
           onClick={() => {
             if (lenis) {
               lenis.scrollTo(0, { duration: 1 });
@@ -131,12 +111,12 @@ export default function MobileNav() {
             }
           }}
         >
-          OG
+          {t('logo')}
         </div>
         <button
           className={`${styles.hamburgerBtn} ${isOpen ? styles.open : ""}`}
           onClick={() => setIsOpen(!isOpen)}
-          aria-label="Toggle navigation menu"
+          aria-label={t('mobile.toggleLabel')}
         >
           <span className={`${styles.bar} ${styles.barTop}`} />
           <span className={`${styles.bar} ${styles.barBottom}`} />
@@ -147,22 +127,23 @@ export default function MobileNav() {
         <nav className={styles.drawerNav}>
           {NAV_ITEMS.map((item, idx) => (
             <div
-              key={item.name}
+              key={item.key}
               ref={(el) => {
                 navItemsRef.current[idx] = el;
               }}
               className={styles.drawerNavItem}
               onClick={() => handleNavClick(item)}
             >
-              <span className={styles.navIndex}>0{idx + 1}</span>
-              <span>{item.name}</span>
+              <span className={`${styles.navIndex} i18n-ltr`}>0{idx + 1}</span>
+              <span>{t(`items.${item.key}`)}</span>
             </div>
           ))}
         </nav>
 
         <div className={styles.drawerFooter}>
-          <span className={styles.footerRole}>Omar Gamal — Portfolio</span>
-          <span>2026</span>
+          <span className={styles.footerRole}>{t('mobile.footerRole')}</span>
+          <LanguageSwitcher variant="bar" />
+          <span className="i18n-ltr">{t('mobile.footerYear')}</span>
         </div>
       </div>
     </>

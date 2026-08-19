@@ -63,16 +63,24 @@ src/lib/impeccable/__runtime.js
 src/lib/impeccable/[0-9a-f]*/
 # impeccable-live-ignore-end
 
-# AI / Agentic coding
+# AI / Agentic coding & temporary tools
 .agents/
 AGENTS.md
 agents.md
 .playwright-cli/
 mcp-playwright/
+bridge/
 scratch/
+images/
 screenshot-*.jpg
+*.py
+*.tsbuildinfo
 
+# Root preview & temporary files
+dark_web.*
+light_web.*
+light_cropped.*
+preview.html
+font_preview.html
 
-
-
-
+.vercel

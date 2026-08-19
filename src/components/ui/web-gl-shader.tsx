@@ -110,15 +110,21 @@ export function WebGLShader() {
       handleResize()
     }
 
+    const prefersReducedMotion = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
     const animate = () => {
       if (isVisible) {
-        if (refs.uniforms) refs.uniforms.time.value += 0.01
+        if (!prefersReducedMotion && refs.uniforms) {
+          refs.uniforms.time.value += 0.01;
+        }
         if (refs.renderer && refs.scene && refs.camera) {
-          refs.renderer.render(refs.scene, refs.camera)
+          refs.renderer.render(refs.scene, refs.camera);
         }
       }
-      refs.animationId = requestAnimationFrame(animate)
-    }
+      if (!prefersReducedMotion) {
+        refs.animationId = requestAnimationFrame(animate);
+      }
+    };
 
     let resizeTimer: NodeJS.Timeout
     const handleResize = () => {

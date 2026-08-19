@@ -1,36 +1,28 @@
 "use client";
 
-import { useRef } from 'react';
-import gsap from 'gsap';
-import { useGSAP } from '@gsap/react';
+import { useEffect, useRef } from 'react';
 import styles from './CustomCursor.module.css';
-
-if (typeof window !== "undefined") {
-  gsap.registerPlugin(useGSAP);
-}
 
 export default function CustomCursor() {
   const cursorRef = useRef<HTMLDivElement>(null);
 
-  useGSAP(() => {
+  useEffect(() => {
     const isHoverDevice = window.matchMedia("(hover: hover)").matches;
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const cursorDot = cursorRef.current;
 
-    if (!isHoverDevice || !cursorDot) return;
-
-    gsap.set(cursorDot, { xPercent: -50, yPercent: -50, force3D: true });
-    const setX = gsap.quickSetter(cursorDot, "x", "px");
-    const setY = gsap.quickSetter(cursorDot, "y", "px");
+    if (!isHoverDevice || prefersReducedMotion || !cursorDot) return;
 
     // Reveal cursor element
-    gsap.set(cursorDot, { autoAlpha: 1 });
+    cursorDot.style.visibility = "visible";
+    cursorDot.style.opacity = "1";
 
     // Hide default cursor globally
     document.body.classList.add("hide-default-cursor");
 
+    // Instant zero-inertia tracking
     const onMouseMove = (e: MouseEvent) => {
-      setX(e.clientX);
-      setY(e.clientY);
+      cursorDot.style.transform = `translate3d(${e.clientX}px, ${e.clientY}px, 0) translate(-50%, -50%)`;
     };
 
     window.addEventListener("mousemove", onMouseMove, { passive: true });
@@ -39,7 +31,7 @@ export default function CustomCursor() {
       window.removeEventListener("mousemove", onMouseMove);
       document.body.classList.remove("hide-default-cursor");
     };
-  }, { scope: cursorRef });
+  }, []);
 
   return (
     <div ref={cursorRef} className={`${styles.cursorDot} gsap-cursor-dot`}></div>

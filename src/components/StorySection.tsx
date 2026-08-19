@@ -4,21 +4,20 @@ import React, { useRef, useState, useEffect } from 'react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useTranslations } from 'next-intl';
 import styles from '@/app/page.module.css';
 
 gsap.registerPlugin(useGSAP, ScrollTrigger);
-
-const paragraphs = [
-  "I operate on a dual-pillar discipline, coupling deep, scalable backend architecture with fluid, high-converting frontend interfaces. When you work with me, you get direct senior-level engineering craftsmanship without agency overhead or middle-management bloat.",
-  "I don’t deliver over-engineered AI slop or rely on generic templates. Every line of code, every architectural decision, and every motion keyframe is crafted with purpose. I build products that don’t just work, they perform and amaze.",
-  "From high-throughput backend systems to pixel-perfect micro-interactions, the result is an elite digital product. Your vision is backed by end-to-end technical excellence from day one."
-];
 
 export default function StorySection() {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [shouldLoadVideo, setShouldLoadVideo] = useState(false);
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
+  const t = useTranslations('story');
+
+  const headlineLines = t.raw('headlineLines') as string[];
+  const paragraphs = t.raw('paragraphs') as string[];
 
   useEffect(() => {
     const container = containerRef.current;
@@ -58,31 +57,36 @@ export default function StorySection() {
   }, [isVideoLoaded]);
 
   useGSAP(() => {
-    // Select all the word spans
     const words = gsap.utils.toArray<HTMLElement>('.gsap-story-word');
-    
     if (words.length === 0) return;
 
-    // Initially dim all words
-    gsap.set(words, { opacity: 0.15 });
+    const mm = gsap.matchMedia();
 
-    // Scrub opacity to 1 as we scroll through the section
-    gsap.to(words, {
-      opacity: 1,
-      stagger: 0.1,
-      ease: "none",
-      scrollTrigger: {
-        trigger: containerRef.current,
-        pin: true,
-        anticipatePin: 1,
-        start: "top top",
-        end: "+=150%",
-        scrub: 0.5,
-        refreshPriority: 8,
-        invalidateOnRefresh: true,
-      }
+    mm.add("(prefers-reduced-motion: no-preference)", () => {
+      // Initially dim all words
+      gsap.set(words, { opacity: 0.15 });
+
+      // Scrub opacity to 1 as we scroll through the section
+      gsap.to(words, {
+        opacity: 1,
+        stagger: 0.1,
+        ease: "none",
+        scrollTrigger: {
+          trigger: containerRef.current,
+          pin: true,
+          anticipatePin: 1,
+          start: "top top",
+          end: "+=150%",
+          scrub: 0.5,
+          refreshPriority: 8,
+          invalidateOnRefresh: true,
+        }
+      });
     });
 
+    mm.add("(prefers-reduced-motion: reduce)", () => {
+      gsap.set(words, { opacity: 1 });
+    });
   }, { scope: containerRef });
 
   return (
@@ -111,7 +115,14 @@ export default function StorySection() {
         )}
       </video>
       <div className={styles.storyContainer}>
-        <h2 className={styles.storyHeadline}>PREMIUM EXECUTION.<br/>NO COMPROMISES.</h2>
+        <h2 className={styles.storyHeadline}>
+          {headlineLines.map((line, i) => (
+            <React.Fragment key={i}>
+              {line}
+              {i < headlineLines.length - 1 ? <br /> : null}
+            </React.Fragment>
+          ))}
+        </h2>
         <div className={styles.storyContent}>
           {paragraphs.map((para, i) => (
             <p key={i}>

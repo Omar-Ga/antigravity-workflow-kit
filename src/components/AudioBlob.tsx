@@ -2,6 +2,7 @@
 
 import React, { useRef, useEffect, useState } from 'react';
 import * as THREE from 'three';
+import { useTranslations } from 'next-intl';
 import { useGeminiLive } from '../hooks/useGeminiLive';
 import styles from './AudioBlob.module.css';
 
@@ -206,6 +207,7 @@ const CORE_FRAGMENT_SHADER = `
 export default function AudioBlob() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [textInputVal, setTextInputVal] = useState('');
+  const t = useTranslations('voice');
 
   const {
     status,
@@ -293,13 +295,15 @@ export default function AudioBlob() {
     }, { threshold: 0.05 });
     io.observe(canvas);
 
+    const prefersReducedMotion = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
     const animate = () => {
       if (isIntersecting) {
         const elapsedTime = (performance.now() - startTime) * 0.001;
-        sharedUniforms.u_time.value = elapsedTime;
+        sharedUniforms.u_time.value = prefersReducedMotion ? 0.0 : elapsedTime;
 
         // Smooth Lerp on Audio Amplitude & Speaking State
-        const targetAmp = getAudioAmp();
+        const targetAmp = prefersReducedMotion ? 0.0 : getAudioAmp();
         currentAmp += (targetAmp - currentAmp) * 0.12;
         sharedUniforms.u_audioAmp.value = currentAmp;
 
@@ -307,14 +311,20 @@ export default function AudioBlob() {
         currentSpeakingState += (targetSpeaking - currentSpeakingState) * 0.08;
         sharedUniforms.u_speakingState.value = currentSpeakingState;
 
-        // Layered rotations for depth and movement
-        mainMesh.rotation.y = elapsedTime * 0.18;
-        mainMesh.rotation.x = Math.sin(elapsedTime * 0.12) * 0.12;
+        if (!prefersReducedMotion) {
+          // Layered rotations for depth and movement
+          mainMesh.rotation.y = elapsedTime * 0.18;
+          mainMesh.rotation.x = Math.sin(elapsedTime * 0.12) * 0.12;
 
-        auraMesh.rotation.y = -elapsedTime * 0.22;
-        auraMesh.rotation.z = Math.cos(elapsedTime * 0.15) * 0.1;
+          auraMesh.rotation.y = -elapsedTime * 0.22;
+          auraMesh.rotation.z = Math.cos(elapsedTime * 0.15) * 0.1;
 
-        coreMesh.rotation.y = elapsedTime * 0.3;
+          coreMesh.rotation.y = elapsedTime * 0.3;
+        } else {
+          mainMesh.rotation.set(0, 0, 0);
+          auraMesh.rotation.set(0, 0, 0);
+          coreMesh.rotation.set(0, 0, 0);
+        }
 
         renderer.render(scene, camera);
       }
@@ -378,14 +388,14 @@ export default function AudioBlob() {
         <div className={styles.transcriptBox}>
           {userTranscript && (
             <div>
-              <div className={styles.transcriptRole}>YOU</div>
-              <div>{userTranscript}</div>
+              <div className={styles.transcriptRole} dir="auto">{t('roleYou')}</div>
+              <div dir="auto">{userTranscript}</div>
             </div>
           )}
           {aiTranscript && (
             <div style={{ marginTop: userTranscript ? '0.5rem' : 0 }}>
-              <div className={`${styles.transcriptRole} ${styles.transcriptAiRole}`}>OMAR AI</div>
-              <div>{aiTranscript}</div>
+              <div className={`${styles.transcriptRole} ${styles.transcriptAiRole}`} dir="auto">{t('roleAi')}</div>
+              <div dir="auto">{aiTranscript}</div>
             </div>
           )}
         </div>
@@ -399,13 +409,13 @@ export default function AudioBlob() {
               status === 'listening' ? styles.statusDotActive : ''
             } ${status === 'speaking' ? styles.statusDotSpeaking : ''}`}
           />
-          <span>
-            {status === 'idle' && 'AI Voice Ready'}
-            {status === 'connecting' && 'Connecting to Gemini...'}
-            {status === 'listening' && 'Listening (Speak Now)'}
-            {status === 'processing' && 'Gemini Thinking...'}
-            {status === 'speaking' && 'AI Responding'}
-            {status === 'error' && (errorMsg || 'Connection Error')}
+          <span dir="auto">
+            {status === 'idle' && t('status.idle')}
+            {status === 'connecting' && t('status.connecting')}
+            {status === 'listening' && t('status.listening')}
+            {status === 'processing' && t('status.processing')}
+            {status === 'speaking' && t('status.speaking')}
+            {status === 'error' && (errorMsg || t('status.error'))}
           </span>
         </div>
 
@@ -414,8 +424,9 @@ export default function AudioBlob() {
             status !== 'idle' && status !== 'error' ? styles.talkButtonActive : ''
           }`}
           onClick={handleToggleConnect}
+          dir="auto"
         >
-          {status === 'idle' || status === 'error' ? 'Talk Now' : 'End Call'}
+          {status === 'idle' || status === 'error' ? t('talkNow') : t('endCall')}
         </button>
 
         {/* Fallback Text Input */}
@@ -424,11 +435,11 @@ export default function AudioBlob() {
             <input
               type="text"
               className={styles.textInput}
-              placeholder="Or type your message..."
+              placeholder={t('textPlaceholder')}
               value={textInputVal}
               onChange={(e) => setTextInputVal(e.target.value)}
             />
-            <button type="submit" className={styles.sendButton}>Send</button>
+            <button type="submit" className={styles.sendButton} dir="auto">{t('send')}</button>
           </form>
         )}
       </div>
