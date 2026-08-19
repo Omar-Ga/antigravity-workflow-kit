@@ -10,7 +10,7 @@ import { useTranslations } from 'next-intl';
 import RippleCanvas from './RippleCanvas';
 import styles from './ProjectsSection.module.css';
 
-const AudioBlob = dynamic(() => import('./AudioBlob'), { ssr: false });
+
 const WebGLShader = dynamic(() => import('./ui/web-gl-shader').then((m) => m.WebGLShader), { ssr: false });
 
 gsap.registerPlugin(ScrollTrigger);
@@ -279,20 +279,18 @@ export default function ProjectsSection() {
           </div>
         </div>
 
-        {/* CENTER: WebGL Canvas / Audio AI Blob / Mobile Static Image */}
+        {/* CENTER: WebGL Canvas / Mobile Static Image */}
         <div className={styles.visualCanvas}>
-          {activeImage === 3 ? (
-            <AudioBlob />
-          ) : isMobile ? (
+          {isMobile ? (
             <img 
-              src={PROJECT_IMAGES[Math.min(activeImage, 2)].replace(/\.webp$/, '_mobile.webp')} 
+              src={PROJECT_IMAGES[activeImage].replace(/\.webp$/, '_mobile.webp')} 
               alt={t('previewAlt')}
               style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px', transition: 'opacity 0.3s ease' }}
             />
           ) : (
             <RippleCanvas
-              images={PROJECT_IMAGES.slice(0, 3)}
-              activeIndex={Math.min(activeImage, 2)}
+              images={PROJECT_IMAGES}
+              activeIndex={activeImage}
             />
           )}
         </div>
