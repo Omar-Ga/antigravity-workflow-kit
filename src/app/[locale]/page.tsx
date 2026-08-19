@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -18,6 +19,10 @@ import ProjectsSection from "@/components/ProjectsSection";
 import ContactOverlay from "@/components/ContactOverlay";
 import AllProjectsOverlay from "@/components/AllProjectsOverlay";
 import styles from '../page.module.css';
+
+// Pulls three.js and @google/genai out of the initial bundle; the widget is
+// browser-only (WebGL, WebAudio, mic), so there is nothing to prerender.
+const VoiceAssistant = dynamic(() => import('@/components/VoiceAssistant'), { ssr: false });
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(useGSAP, ScrollTrigger);
@@ -309,6 +314,7 @@ export default function Home() {
 
       <ContactOverlay isOpen={isContactOpen} onClose={() => setIsContactOpen(false)} />
       <AllProjectsOverlay isOpen={isArchiveOpen} onClose={() => setIsArchiveOpen(false)} />
+      {isLoaded && <VoiceAssistant hidden={isContactOpen || isArchiveOpen} />}
       <CustomCursor />
     </>
   );

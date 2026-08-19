@@ -1,30 +1,42 @@
+/**
+ * Captures microphone audio and forwards it as 16-bit little-endian PCM.
+ *
+ * The host creates this worklet inside an AudioContext locked to 16 kHz, which
+ * is the Gemini Live API's native input rate, so no resampling happens here —
+ * this processor only batches frames and converts Float32 to Int16.
+ *
+ * 1024 frames at 16 kHz is a 64 ms packet: small enough to keep turn detection
+ * responsive, large enough to avoid flooding the socket.
+ */
+const FRAMES_PER_CHUNK = 1024;
+
 class PCMCaptureProcessor extends AudioWorkletProcessor {
   constructor() {
     super();
-    this.bufferSize = 2048;
-    this.buffer = new Float32Array(this.bufferSize);
-    this.bufferIndex = 0;
+    this.buffer = new Float32Array(FRAMES_PER_CHUNK);
+    this.offset = 0;
   }
 
-  process(inputs, outputs, parameters) {
-    const input = inputs[0];
-    if (!input || !input[0]) return true;
+  process(inputs) {
+    const channel = inputs[0]?.[0];
+    if (!channel) return true;
 
-    const channelData = input[0];
-    for (let i = 0; i < channelData.length; i++) {
-      this.buffer[this.bufferIndex++] = channelData[i];
-      if (this.bufferIndex >= this.bufferSize) {
-        // Convert Float32 [-1.0, 1.0] to Int16 [-32768, 32767]
-        const pcm16 = new Int16Array(this.bufferSize);
-        for (let j = 0; j < this.bufferSize; j++) {
-          const s = Math.max(-1, Math.min(1, this.buffer[j]));
-          pcm16[j] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+    for (let i = 0; i < channel.length; i++) {
+      this.buffer[this.offset++] = channel[i];
+
+      if (this.offset === FRAMES_PER_CHUNK) {
+        const pcm16 = new Int16Array(FRAMES_PER_CHUNK);
+        for (let j = 0; j < FRAMES_PER_CHUNK; j++) {
+          const clamped = Math.max(-1, Math.min(1, this.buffer[j]));
+          pcm16[j] = clamped < 0 ? clamped * 0x8000 : clamped * 0x7fff;
         }
+        // Transferred, not copied. The scratch buffer is reused as-is because
+        // every slot is overwritten before the next chunk is emitted.
         this.port.postMessage(pcm16.buffer, [pcm16.buffer]);
-        this.buffer = new Float32Array(this.bufferSize);
-        this.bufferIndex = 0;
+        this.offset = 0;
       }
     }
+
     return true;
   }
 }
