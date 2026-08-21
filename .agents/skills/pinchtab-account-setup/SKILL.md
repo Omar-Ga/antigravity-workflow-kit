@@ -4,8 +4,8 @@ description: >
   How to configure PinchTab to always open with a specific Google account
   by giving it a dedicated, isolated browser User Data directory. Covers the
   correct architecture (Brave + named profiles registered via the HTTP API),
-  all failed approaches to avoid, the one-time manual sign-in flow, and
-  multi-account switching.
+  clean 1-tab startup configuration, manual sign-in / CAPTCHA bypass workflow,
+  all failed approaches to avoid, and multi-account switching.
 ---
 
 # PinchTab Account Setup & Switching
@@ -106,7 +106,9 @@ Notes:
 C:\Users\Omar\AppData\Local\Google\Chrome\
   ├── User Data\                          ← real Chrome, untouched
   └── PinchTab User Data - islorian\      ← profiles.baseDir (config.json)
+      ├── prof_6c78a0d6\                  ← named profile "omargamalsvc" (stable)
       ├── prof_f3dfeebe\                  ← named profile "islorian" (stable)
+      ├── prof_0d63f3fb\                  ← named profile "oomarolayan" (stable)
       └── instance-<timestamp>\           ← EPHEMERAL — only when no --profile given
 ```
 
@@ -120,57 +122,63 @@ C:\Users\Omar\AppData\Local\Google\Chrome\
 }
 ```
 
-Each Google account = one named profile registered via the API.
-
 ### Current registry (verified 2026-08-20)
 
 | Profile name | Profile ID | Google account | Signed-in persistence tested |
 |---|---|---|---|
-| `islorian` | `prof_f3dfeebe` | islorian@gmail.com | yes (stop → start → AccountChooser shows account) |
-| `omargamalsvc` | `prof_6c78a0d6` | omargamalsvc@gmail.com | yes |
+| `omargamalsvc` *(default)* | `prof_6c78a0d6` | omargamalsvc@gmail.com | yes |
+| `islorian` | `prof_f3dfeebe` | islorian@gmail.com | yes |
 | `oomarolayan` | `prof_0d63f3fb` | oomarolayan.gamal@gmail.com | yes |
 
 There is **no profile picker** in this model — each named profile is its own
 isolated `--user-data-dir` containing exactly one browser profile, so there is
 nothing to pick from. "Choosing a profile" is simply the `--profile` flag at
-launch, and multiple accounts can run **in parallel** (one instance per
-profile, each on its own port). Note: the profile registry's `hasAccount` /
-`accountEmail` fields stay empty even after a successful sign-in — don't use
-them to verify login state; check `accounts.google.com/AccountChooser` instead.
+launch.
 
-## One-Time Setup for Each Account
+---
 
-### 1. Register the named profile (see API snippet above)
+## Clean Tab Startup Configuration
 
-### 2. Start a headed instance on it
+To prevent browsers from resurrecting dozens of old tabs from prior sessions:
+1. Every profile has `"session": { "restore_on_startup": 1, "startup_urls": [] }` in its `Default/Preferences` (`1` = New Tab Page).
+2. PinchTab's `config.json` sets `"instanceDefaults": { "noRestore": true }` and passes `--no-restore-session-state`.
+3. Each new instance starts with **1 clean tab** instead of accumulating stale tabs.
 
-```powershell
-pinchtab instance start --mode headed --profile islorian
-```
+---
 
-> The server itself must already be running via schtasks (see GUI launch rule).
-> `multiInstance.strategy` is `explicit`, so nothing auto-launches — you must
-> start the instance. `pinchtab nav` without a running instance returns
-> `Error 503: no running instances`.
+## Manual Sign-In / CAPTCHA Bypass (Clean Standalone Mode)
 
-### 3. Sign in manually — ONE TIME ONLY
+Some authentication providers (Google Sign-In, Cloudflare Turnstile, Arkose, 2FA, passkeys) detect active automation / CDP debugging flags and block buttons or popup flows.
 
-The headed window opens; navigate it to `https://accounts.google.com/` (or
-`pinchtab --server http://127.0.0.1:<instancePort> nav https://accounts.google.com/`)
-and sign into the target Google account by hand. The user completes sign-in and
-any human verification — the agent never touches credentials.
+To bypass this without losing profile cookies, launch the profile in **Clean Standalone Mode** (no CDP, no PinchTab daemon attached).
 
-### 4. Close the browser
+### Usage Discipline (Strict Rule)
+> **The manual standalone helper script is NOT to be used unless explicitly requested by the user, or when an automated sign-in / CAPTCHA is blocked and requires manual user intervention.**
 
-`pinchtab instance stop <id>` (or click the **X** on the window). Either is
-fine — `instance stop` hard-kills the process (sets `"exit_type": "Crashed"`),
-but Brave's suppression flags hide the crash-restore bubble, so a graceful
-close is **not** required. Verified: the Google login persists across
-stop → start cycles either way.
+### Execution Protocol
 
-The session is now permanently saved. Every future
-`pinchtab instance start --mode headed --profile islorian` opens directly into
-this account.
+1. **Stop active PinchTab instance / processes** to unlock the profile folder:
+   ```powershell
+   Get-Process brave,pinchtab-windows-amd64 -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+   ```
+
+2. **Launch Standalone Clean Brave via Task Scheduler**:
+   ```powershell
+   schtasks /Create /TN "LaunchManualBrave" /TR 'powershell.exe -ExecutionPolicy Bypass -File "%APPDATA%\pinchtab\launch-manual-auth.ps1" -Profile omargamalsvc -Url "<url>"' /SC ONCE /ST 23:59 /F
+   schtasks /Run /TN "LaunchManualBrave"
+   ```
+
+3. **Notify User**:
+   Tell the user the standalone Brave window is open. Instruct them to complete the sign-in / CAPTCHA, close the window, and say *"I'm done"* in chat.
+
+4. **Resume PinchTab Upon Confirmation**:
+   When the user confirms they are done:
+   - Ensure the standalone Brave window is closed (`Get-Process brave -ErrorAction SilentlyContinue | Stop-Process -Force`).
+   - Start the PinchTab GUI server: `schtasks /Run /TN "LaunchPinchTabGUI"`
+   - Start the instance: `pinchtab instance start --mode headed --profile omargamalsvc`
+   - Re-target the instance port (e.g. `pinchtab --server http://127.0.0.1:9868 ...`) and resume automation.
+
+---
 
 ## Multi-Account Switching
 
@@ -182,13 +190,7 @@ pinchtab instance stop <currentInstanceId>
 pinchtab instance start --mode headed --profile <otherAccount>
 ```
 
-Register as many named profiles as needed (one per account) via the
-`POST /profiles` API.
-
-> **Legacy:** the old `scripts/switch-account.ps1` (which killed processes and
-> patched `profiles.baseDir` in config.json) was obsolete under the
-> named-profile model and has been **deleted**. It only mattered for the
-> ≤0.14 baseDir-switching approach.
+---
 
 ## Failed Approaches (do not retry)
 
@@ -208,12 +210,14 @@ Register as many named profiles as needed (one per account) via the
 6. **Launching without `--profile` on an empty registry.** Creates an
    ephemeral `instance-<timestamp>` dir — login is lost every session.
 
+---
+
 ## Important Notes
 
 ### Stopping processes correctly
 
 The PinchTab daemon process name is `pinchtab-windows-amd64` (NOT `pinchtab`).
-The browser is now `brave`. Always stop with:
+The browser is `brave`. Always stop with:
 
 ```powershell
 Get-Process brave,pinchtab-windows-amd64 -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
@@ -226,54 +230,8 @@ never run `pinchtab server` directly from a subshell. Direct subshell launches
 are invisible desktop sessions that cause `0xc0000142` errors. The scheduled
 task runs `pinchtab server`.
 
-### Stale bridges squatting on port 9867
-
-Old `pinchtab bridge` processes (sometimes with an Edge fallback on 9222) can
-hold port 9867 and make the CLI report "running instance does not support
-GET /instances (older version)". Kill all `pinchtab-windows-amd64` processes,
-verify the port is free (`Get-NetTCPConnection -LocalPort 9867,9222`), then
-relaunch via schtasks.
-
-### The Profile Chooser bubble
-
-Under Chrome this appeared when the profile was force-killed
-(`exit_type: Crashed`) or when Chrome fell back to the real `User Data\`.
-Under Brave + named profiles both causes are gone: suppression flags hide the
-bubble and the isolated stable dir never touches your real profiles.
-
 ### Instance targeting
 
 Each instance gets its own port (9868+ from `multiInstance.instancePortStart`).
 Target a specific instance with `--server http://127.0.0.1:<port>` on any CLI
 command. `pinchtab instances --json` lists id/profileName/port/status.
-
-## Troubleshooting
-
-### Hard-killing brave.exe (`Stop-Process -Name brave -Force`)
-
-Two possible aftermaths (both verified 2026-08-20):
-
-1. **Server auto-relaunches the killed session.** The next explicit
-   `instance start --profile <name>` then fails with
-   `Error 409: profile "<name>" already has an active instance (running)`.
-   This is not an error — the instance is already back. Check
-   `pinchtab instances --json` first.
-2. **Stale "running" entries.** If the server does NOT auto-recover,
-   `pinchtab instances` still lists the dead instances as `running`. Clean
-   them with `pinchtab instance stop <id>` before starting anything new.
-
-Either way, logins survive hard kills — verify with AccountChooser after
-restart.
-
-### Verifying login state
-
-Never trust the profile registry's `hasAccount` / `accountEmail` fields (they
-stay empty). Instead:
-
-```powershell
-pinchtab --server http://127.0.0.1:<instancePort> nav "https://accounts.google.com/AccountChooser"
-pinchtab --server http://127.0.0.1:<instancePort> text
-```
-
-The page text lists the signed-in account (name + email) if the session
-persisted.

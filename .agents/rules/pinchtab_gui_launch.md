@@ -33,7 +33,8 @@ Whenever starting a visible GUI server or browser process on Windows from an age
 2. **Verify Server Health Endpoint**:
    Confirm that the server is up:
    ```powershell
-   Invoke-RestMethod -Uri "http://localhost:9867/health" -Headers @{ Authorization = "Bearer <token>" }
+   $token = (Get-Content "$env:APPDATA\pinchtab\config.json" -Raw | ConvertFrom-Json).server.token
+   Invoke-RestMethod -Uri "http://127.0.0.1:9867/health" -Headers @{ Authorization = "Bearer $token" }
    ```
 
 3. **Check/Start Single Instance with `omargamalsvc`**:
@@ -50,3 +51,32 @@ Whenever starting a visible GUI server or browser process on Windows from an age
    pinchtab --server http://127.0.0.1:9868 nav <url> --snap
    pinchtab --server http://127.0.0.1:9868 click <ref> --snap-diff
    ```
+
+## 4. Tab Management & Clean Startup
+All PinchTab Brave profiles (`omargamalsvc`, `islorian`, `oomarolayan`) are configured with `restore_on_startup: 1` and `"instanceDefaults": { "noRestore": true }` to always start with 1 clean tab and prevent accumulating stale tabs across sessions.
+
+## 5. Manual Sign-In / CAPTCHA Bypass Workflow (Clean Standalone Mode)
+When an automated sign-in, sign-up, Google OAuth, 2FA, passkey, or Cloudflare challenge cannot be completed automatically by PinchTab (e.g. anti-bot scripts silently drop automated CDP clicks or disable buttons):
+
+### Usage Constraint (Strict)
+The manual standalone helper script is **NOT to be used unless explicitly requested by the user, or when an automated sign-in is blocked and requires manual user intervention**.
+
+### Execution Protocol
+1. **Stop Active Instances to Release Lockfile**:
+   ```powershell
+   Get-Process brave,pinchtab-windows-amd64 -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+   ```
+2. **Launch Standalone Clean Brave via Task Scheduler**:
+   Run `launch-manual-auth.ps1` with NO remote debugging / NO CDP flags:
+   ```powershell
+   schtasks /Create /TN "LaunchManualBrave" /TR 'powershell.exe -ExecutionPolicy Bypass -File "%APPDATA%\pinchtab\launch-manual-auth.ps1" -Profile omargamalsvc -Url "<target_url>"' /SC ONCE /ST 23:59 /F
+   schtasks /Run /TN "LaunchManualBrave"
+   ```
+3. **Notify the User**:
+   Tell the user that the standalone Brave window is open for the specified profile. Instruct them to complete the sign-in / verification, close the window, and say *"I'm done"* in chat.
+4. **Resume PinchTab Upon Confirmation**:
+   When the user confirms they are done:
+   - Ensure the standalone Brave window is closed.
+   - Start the PinchTab GUI server: `schtasks /Run /TN "LaunchPinchTabGUI"`
+   - Start the instance: `pinchtab instance start --mode headed --profile omargamalsvc`
+   - Re-target the instance port and resume normal automated operation on the authenticated session.
