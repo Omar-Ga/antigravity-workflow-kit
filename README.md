@@ -16,7 +16,7 @@ your-project/
 │   │   ├── coding-conventions.md
 │   │   ├── graphify-template.md       ← rename to graphify.md after setup
 │   │   └── pinchtab_gui_launch.md     ← Windows Task Scheduler GUI launcher rule
-│   ├── skills/                        # 18 project-scoped skills
+│   ├── skills/                        # 16 project-scoped skills
 │   │   ├── graphify/
 │   │   ├── pinchtab/
 │   │   ├── pinchtab-account-setup/
@@ -24,8 +24,6 @@ your-project/
 │   │   ├── pinchtab-flow-images/
 │   │   ├── pinchtab-opt/
 │   │   ├── pinchtab-stealth-score/
-│   │   ├── playwright-cli/
-│   │   ├── playwright-cli-bridge/
 │   │   ├── ponytail/
 │   │   ├── project-planner/
 │   │   ├── skill-creator/
@@ -60,7 +58,6 @@ your-project/
 | **Graphify Integration** | AST-based codebase knowledge graph — query relationships, trace call chains |
 | **Sub-agent Dispatch** | Persona-based specialist agents for research, debugging, QA, and verification |
 | **PinchTab Integration** | High-performance Go browser automation (`pinchtab`, `pinchtab-account-setup`, `pinchtab-brave-attach`, `pinchtab-flow-images`, `pinchtab-opt`, `pinchtab-stealth-score`) + `schtasks` desktop GUI launcher rule |
-| **Playwright CLI & Bridge** | Complete browser automation suite + CDP bridge to attach to live browser sessions |
 | **Task Workflows** | `/start-phase`, `/verify`, `/mark-off` — structured phase-by-phase development |
 | **Wiki Workflows** | `/wiki-audit`, `/wiki-review` — keep the knowledge base accurate and current |
 | **Coding Conventions** | Strict, language-agnostic rules enforced on every code generation |
@@ -104,17 +101,6 @@ Minimum content for `wiki/log.md`:
 # Wiki Log
 
 *Append-only audit trail. Never delete entries.*
-```
-
-### Step 3 — Set up the Playwright bridge (optional)
-If you want browser automation through the persistent CLI bridge, copy the `bridge/` files to a working directory (e.g., `d:\AI` or `~/ai-bridge`):
-
-```
-bridge/
-├── pw-bridge.bat           # Entry point — run all commands through this
-├── pw-bridge.ps1           # PowerShell script that proxies to the bridge server
-├── pw_bridge_server.py     # Persistent Python server that holds the browser connection
-└── launch_brave_rp.bat     # Launches Brave with --remote-debugging-port=9222
 ```
 
 ---
