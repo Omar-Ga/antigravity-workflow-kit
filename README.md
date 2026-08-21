@@ -16,12 +16,12 @@ your-project/
 │   │   ├── coding-conventions.md
 │   │   ├── graphify-template.md       ← rename to graphify.md after setup
 │   │   └── pinchtab_gui_launch.md     ← Windows Task Scheduler GUI launcher rule
-│   ├── skills/                        # 16 project-scoped skills
+│   ├── skills/                        # 18 project-scoped skills
 │   │   ├── graphify/
 │   │   ├── pinchtab/
 │   │   ├── pinchtab-account-setup/
+│   │   ├── pinchtab-brave-attach/
 │   │   ├── pinchtab-flow-images/
-│   │   ├── pinchtab-mcp/
 │   │   ├── pinchtab-opt/
 │   │   ├── pinchtab-stealth-score/
 │   │   ├── playwright-cli/
@@ -59,7 +59,7 @@ your-project/
 | **Project Planner** | A wizard that generates PRD → Design → Frontend Spec → Tasks (with intra-phase ordering) |
 | **Graphify Integration** | AST-based codebase knowledge graph — query relationships, trace call chains |
 | **Sub-agent Dispatch** | Persona-based specialist agents for research, debugging, QA, and verification |
-| **PinchTab Integration** | High-performance Go browser automation (`pinchtab`, `pinchtab-account-setup`, `pinchtab-flow-images`, `pinchtab-mcp`, `pinchtab-opt`, `pinchtab-stealth-score`) + `schtasks` desktop GUI launcher rule |
+| **PinchTab Integration** | High-performance Go browser automation (`pinchtab`, `pinchtab-account-setup`, `pinchtab-brave-attach`, `pinchtab-flow-images`, `pinchtab-opt`, `pinchtab-stealth-score`) + `schtasks` desktop GUI launcher rule |
 | **Playwright CLI & Bridge** | Complete browser automation suite + CDP bridge to attach to live browser sessions |
 | **Task Workflows** | `/start-phase`, `/verify`, `/mark-off` — structured phase-by-phase development |
 | **Wiki Workflows** | `/wiki-audit`, `/wiki-review` — keep the knowledge base accurate and current |
@@ -121,7 +121,7 @@ bridge/
 
 ## PinchTab Setup & Multi-Account Workflow (Optional)
 
-PinchTab is a high-performance Go browser automation engine. It isolates automation sessions in dedicated Chrome profile folders so your main browser tabs and profiles remain 100% untouched.
+PinchTab is a high-performance Go browser automation engine. It runs on **Brave** (set via `browser.binary` in `%APPDATA%\pinchtab\config.json`) and isolates automation sessions in dedicated named profiles, each with its own `--user-data-dir`, so your main browser tabs and profiles remain 100% untouched.
 
 ### 1. MCP Configuration
 To connect PinchTab to your AI editor (Antigravity, Claude, Cursor, Windsurf, etc.), add this block to your `mcp_config.json`:
@@ -153,41 +153,31 @@ On Windows, launching PinchTab directly from a background subshell causes deskto
 
 ### 3. Account Setup & Isolation Flow (`pinchtab-account-setup`)
 
-#### First-Time Account Setup
-1. **Create a dedicated profile directory** (separate from your personal Chrome `User Data`):
-   ```powershell
-   New-Item -ItemType Directory -Path "$env:LOCALAPPDATA\Google\Chrome\PinchTab User Data" -Force
-   ```
-2. **Point `config.json` (`%APPDATA%\pinchtab\config.json`) to the directory**:
-   ```json
-   {
-     "profiles": {
-       "baseDir": "C:\\Users\\<username>\\AppData\\Local\\Google\\Chrome\\PinchTab User Data",
-       "defaultProfile": "default",
-       "quarantineKeep": 1
-     }
-   }
-   ```
-3. **Launch PinchTab & Sign In (One-Time Only)**:
-   ```powershell
-   schtasks /Run /TN "LaunchPinchTabGUI"
-   pinchtab nav https://accounts.google.com/
-   ```
-   Sign into your target Google account inside the open browser window.
-4. **Close Gracefully**:
-   Click the **X** button on the browser window to close it gracefully (writing `"exit_type": "Normal"` to avoid crash recovery bubbles). The encrypted session is saved permanently in that isolated directory.
+PinchTab uses **Brave** with **named profiles** — one registered profile per Google account, each backed by its own isolated `--user-data-dir`. There is no profile picker; the `--profile` flag at launch chooses the account.
 
-#### Adding More Accounts & Switching Workflow
-1. **Create an isolated directory for each new account**:
-   - e.g., `PinchTab User Data - account2`
-2. **Switch active accounts**:
-   Run the account switcher script (`switch-account.ps1`) provided in `.agents/skills/pinchtab-account-setup/SKILL.md`:
+#### First-Time Account Setup
+1. **Register a named profile** via the HTTP API (there is no CLI subcommand for this). The auth token lives in `server.token` in `%APPDATA%\pinchtab\config.json`:
    ```powershell
-   & "$env:APPDATA\pinchtab\switch-account.ps1" -Account <nickname>
+   $token = (Get-Content "$env:APPDATA\pinchtab\config.json" -Raw | ConvertFrom-Json).server.token
+   $h = @{ Authorization = "Bearer $token" }
+   Invoke-RestMethod -Uri "http://127.0.0.1:9867/profiles" -Method Post -Headers $h `
+     -ContentType "application/json" -Body '{"name":"<accountNickname>"}'
    ```
-   The script gracefully terminates active PinchTab processes, patches `profiles.baseDir` in `config.json`, and relaunches PinchTab via `schtasks`.
-3. **One-Time Sign In**:
-   Sign in once inside the newly pointed profile directory and close gracefully. Every future `pinchtab` launch will open directly into that account.
+   This creates a stable directory `<profiles.baseDir>\prof_<id>` and registers it.
+2. **Start a headed instance on it**:
+   ```powershell
+   schtasks /Run /TN "LaunchPinchTabGUI"   # server must already be running
+   pinchtab instance start --mode headed --profile <accountNickname>
+   ```
+   Note: `multiInstance.strategy` is `explicit` — nothing auto-launches, and `pinchtab nav` without a running instance returns `Error 503`.
+3. **Sign In (One-Time Only)**: navigate the opened Brave window to `https://accounts.google.com/` and sign in by hand. The encrypted session is saved permanently in that isolated directory. `instance stop` afterwards hard-kills the process, which is harmless under Brave's crash-bubble suppression flags.
+
+#### Adding More Accounts & Switching
+Register one named profile per account (step 1 above), then switch by flag — no config patching, no restart, and multiple accounts can even run in parallel on separate ports:
+```powershell
+pinchtab instance start --mode headed --profile <accountNickname>
+```
+Never launch without `--profile` (creates a throwaway `instance-<timestamp>` dir) and never use `--profile default` (returns 404 on pinchtab 0.15.1 — only API-registered profiles are valid). Verify login state via `https://accounts.google.com/AccountChooser`, not the registry's `hasAccount` field (it stays empty).
 
 ---
 

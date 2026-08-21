@@ -7,10 +7,8 @@ metadata:
       bins:
         - pinchtab
       anyBins:
-        - google-chrome
-        - google-chrome-stable
-        - chromium
-        - chromium-browser
+        - brave
+        - brave-browser
     homepage: https://github.com/pinchtab/pinchtab
     install:
       - kind: brew
@@ -25,15 +23,27 @@ metadata:
 
 CLI-first browser skill. Use `pinchtab` commands.
 
+## Browser: Brave & Default Account Profile
+
+On this machine PinchTab drives **Brave**, not Chrome (set via `browser.binary`
+in `%APPDATA%\pinchtab\config.json`).
+
+- **Default Profile**: ALWAYS use **`omargamalsvc`** (`omargamalsvc@gmail.com`) unless the user explicitly specifies another account.
+- **Single Instance Discipline**: Never spawn multiple browsers. Check running instances (`pinchtab instances --json`) and reuse the existing one, or start exactly one with `--profile omargamalsvc`.
+- **Targeting Requirement**: Always target the instance explicitly via `--server http://127.0.0.1:<instancePort>` on all commands to avoid triggering redundant auto-start browsers.
+
 ## Core Workflow
 
-1. Create a session: `export PINCHTAB_SESSION=$(pinchtab session create --agent-id myagent)` — do this once before any browser command.
-2. Navigate: `pinchtab nav <url> --snap` — auto-starts the local server if needed, then returns tab ID + interactive snapshot in one call.
-3. Interact: `pinchtab click <ref> --snap-diff` — returns OK + only changed elements (most token-efficient).
-   - Click behavior: omit `--mode` for the normal click path, use `--mode dom`, or use `--mode dispatch`.
-   - Treat `--mode` as a broad, low-level escape hatch. Occlusion workaround is the common case: `pinchtab click <ref> --mode dom` or `pinchtab click <ref> --mode dispatch`
+1. **Check or Start Single Instance**:
+   - Check if already active: `pinchtab instances --json`
+   - If not running, start one: `pinchtab instance start --mode headed --profile omargamalsvc`
+2. **Navigate with Target Port**:
+   - `pinchtab --server http://127.0.0.1:<port> nav <url> --snap`
+3. **Interact**:
+   - `pinchtab --server http://127.0.0.1:<port> click <ref> --snap-diff`
+   - Click behavior: omit `--mode` for normal, or use `--mode dom` / `--mode dispatch`.
    - `--mode` and `--humanize` are mutually exclusive.
-4. For read-only observation: `pinchtab text` when you won't act on refs.
+4. **For read-only observation**: `pinchtab --server http://127.0.0.1:<port> text` when you won't act on refs.
 
 **Key optimization**: Use `--snap-diff` on `nav`, `click`, `fill`, `select`, `press`, `scroll`, `back`, `forward`, `reload` to get only added/changed/removed elements — most token-efficient for multi-step flows. Use `--snap` when you need the full snapshot (e.g., first navigation, or after major page changes). `--text` is available on `click`, `fill`, `select`, `press`, `back`, `forward`, `reload` (but NOT on `nav` or `scroll`) when you need prose content for verification (skips snap, returns page text directly). `dblclick` does not support any observation flag — run a separate `snap` after.
 
@@ -87,7 +97,7 @@ If a site requires a CAPTCHA, anti-bot challenge, or other human verification, s
 
 Patterns: (1) one-off `pinchtab instance start`; (2) reuse profile `instance start --profile work --mode headed`, switch to headless after login; (3) HTTP `POST /profiles` then `POST /profiles/<name>/start`; (4) human-assisted headed login, agent reuses headless. Agent sessions: `pinchtab session create --agent-id <id>` or `POST /sessions` → set `PINCHTAB_SESSION=ses_...`.
 
-> **CRITICAL PROFILE WARNING**: `pinchtab instance start` inherently creates a **blank, ephemeral profile** if you do not specify a profile name. If you are trying to use a persistent Google account or saved config (e.g., via the `pinchtab-account-setup` skill), you **MUST** include `--profile default` (e.g. `pinchtab instance start --mode headed --profile default`). Otherwise, you will be inexplicably logged out because you are in a throwaway session.
+> **CRITICAL PROFILE WARNING**: `pinchtab instance start` inherently creates a **blank, ephemeral profile** (`instance-<timestamp>` dir) if you do not specify a profile name. If you are trying to use a persistent Google account or saved config (e.g., via the `pinchtab-account-setup` skill), you **MUST** pass a registered named profile (e.g. `pinchtab instance start --mode headed --profile islorian`). Otherwise, you will be inexplicably logged out because you are in a throwaway session. Note: `--profile default` returns **404** on pinchtab 0.15.1 — only profiles registered via `POST /profiles` (see `pinchtab-account-setup`) are valid.
 
 **Session reuse safety:** When reusing authenticated browser sessions established by a human, use a dedicated low-privilege profile — not the user's personal browsing profile. Confirm with the user before performing account-changing actions (password changes, payment, deletion, permissions) in a reused session. Restrict navigation to the sites needed for the task.
 

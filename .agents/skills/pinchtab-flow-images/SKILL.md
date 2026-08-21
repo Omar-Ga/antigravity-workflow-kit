@@ -26,7 +26,10 @@ produce higher-quality images through Google Flow.
 ## Prerequisites
 
 - PinchTab server must be running (use `schtasks /Run /TN "LaunchPinchTabGUI"`)
-- The `omargamalsvc@gmail.com` profile must be active (see `pinchtab-account-setup` skill)
+- A headed Brave instance on the `omargamalsvc` named profile must be running
+  (Google Flow PRO is on that account):
+  `pinchtab instance start --mode headed --profile omargamalsvc`
+  (see `pinchtab-account-setup` skill for the profile registry)
 - Google Flow PRO plan is active on this account
 
 ---
@@ -41,6 +44,11 @@ schtasks /Run /TN "LaunchPinchTabGUI"
 
 # Wait for server health (retry up to 5 times with 2s intervals)
 # Health endpoint requires auth token — a 401/403 response still means the server is UP
+
+# Start a headed Brave instance on the omargamalsvc named profile.
+# multiInstance.strategy is "explicit" — nothing auto-launches, and
+# `pinchtab nav` without a running instance returns Error 503.
+pinchtab instance start --mode headed --profile omargamalsvc
 
 # Navigate to Google Flow
 pinchtab nav https://labs.google/fx/tools/flow
